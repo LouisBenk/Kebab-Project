@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mein Profil – Dönerd</title>
+
+  <!-- Same vibe as your app -->
+  <style>
+    /* Light = Standard (wie auf der Map) */
+:root{
+  --bg:#f0f0f0; --text:#111; --muted:#6b7280; --card:#fff;
+  --ring:#e5e7eb; --chip:#eef0f3; --chipText:#0f172a;
+  --accent:#fb923c; --accent-strong:#f97316;
+  --shadow:0 4px 16px rgba(0,0,0,.12);
+  --surface:#f7f8fb; 
+}
+
+/* Dark = optional per data-theme="dark" */
+html[data-theme="dark"]{
+  --bg:#0b0f14; --text:#e5e7eb; --muted:#9aa4b2; --card:#0f172a;
+  --ring:#1f2937; --chip:#0b1220; --chipText:#e5e7eb;
+  --accent:#fb923c; --accent-strong:#f97316;
+  --shadow:0 8px 24px rgba(0,0,0,.35);
+    --surface:#0b1220; 
+}
+
+    html,body{ margin:0; height:100%; background:var(--bg); color:var(--text); font-family:Arial,sans-serif }
+    a{ color:inherit; text-decoration:none }
+
+    /* Layout */
+    .wrap{ max-width:980px; margin:0 auto; padding:22px; }
+    header{
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+      position:sticky; top:0; padding:14px 0 10px; background:linear-gradient(180deg,var(--bg),transparent);
+      z-index:5;
+    }
+    .brand{ display:flex; align-items:center; gap:10px; font-weight:900; font-size:22px }
+    .brand .dot{ width:12px; height:12px; border-radius:50%; background:#ff385c; display:inline-block }
+    .pill{ display:inline-flex; align-items:center; gap:8px; padding:10px 14px; border-radius:999px;
+           background:var(--card); border:1px solid var(--ring); box-shadow:0 2px 8px rgba(0,0,0,.12);
+           font-weight:800; cursor:pointer }
+    .pill:hover{ background:#11182766 }
+    .pill.primary{ background:var(--accent); color:#000; border-color:transparent; box-shadow:0 6px 16px rgba(249,115,22,.35) }
+    .grid{ display:grid; gap:16px }
+    @media (min-width: 920px){
+      .grid-cols-3{ grid-template-columns: 1.1fr 1fr 1fr }
+      .grid-cols-2{ grid-template-columns: 1fr 1fr }
+    }
+
+    .card{ background:var(--card); border:1px solid var(--ring); border-radius:16px; box-shadow:var(--shadow); }
+    .card-body{ padding:16px }
+    .card-title{ font-weight:900; font-size:18px; margin:0 0 8px }
+    .row{ display:flex; align-items:center; gap:12px; }
+    .meta{ color:var(--muted); }
+
+    /* Profile header */
+    .hero{ display:flex; gap:14px; align-items:center; padding:16px }
+    .avatar{ width:72px; height:72px; border-radius:14px; background:#0002; object-fit:cover; }
+    .name{ font-weight:900; font-size:22px; line-height:1.2 }
+    .tag{ display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px;
+          background:var(--chip); color:var(--chipText); border:1px solid var(--ring); font-weight:800; font-size:12px }
+
+    /* Stats */
+    .stats{ display:grid; grid-template-columns: repeat(3,1fr); gap:12px; padding:12px 16px 16px }
+    .stat{ background:var(--surface); border:1px solid var(--ring); border-radius:14px; padding:14px; text-align:center }
+    .stat .n{ font-weight:900; font-size:22px }
+    .stat .l{ color:var(--muted); font-weight:800; font-size:12px; margin-top:4px; display:block }
+
+    /* Lists */
+    .list{ display:grid; gap:10px }
+    .item{
+  display:grid; grid-template-columns: 84px 1fr auto; gap:12px; align-items:center;
+  padding:10px; border:1px solid var(--ring); border-radius:14px; background:var(--surface);
+}
+    .thumb{ width:84px; height:68px; border-radius:10px; object-fit:cover; background:#0002 }
+    .item .title{ font-weight:900 }
+    .item .sub{ color:var(--muted); font-size:12px }
+    .chips{ display:flex; gap:6px; flex-wrap:wrap }
+    .chip{ display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px;
+           background:var(--chip); color:var(--chipText); border:1px solid var(--ring); font-weight:800; font-size:12px }
+    .right{ display:flex; gap:8px }
+
+    /* Forms */
+    .input{ width:100%; padding:10px; border-radius:10px; border:1px solid var(--ring); background:transparent; color:var(--text); font:inherit }
+    .small{ font-size:12px; color:var(--muted); }
+
+    /* Toast (reusing your pattern) */
+    #toast{
+      position:fixed; left:50%; bottom:22px; transform:translateX(-50%);
+      background:#111; color:#fff; border-radius:999px; padding:10px 14px;
+      box-shadow:0 6px 18px rgba(0,0,0,.35); z-index:1400; display:none; font-weight:800
+    }
+    #toast.show{ display:block; animation:toastfade .25s ease both }
+    @keyframes toastfade{ from{opacity:0; transform:translate(-50%,8px)} to{opacity:1; transform:translate(-50%,0)} }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand"><span class="dot"></span><span>Dönerd</span></div>
+      <div class="row" style="gap:8px">
+        <button id="btnHome" class="pill">🏠 Start</button>
+        <button id="btnLogout" class="pill">🚪 Logout</button>
+      </div>
+    </header>
+
+    <!-- Profile hero -->
+    <div class="card">
+      <div class="hero">
+        <img id="pAvatar" class="avatar" alt="Avatar" />
+        <div style="flex:1">
+          <div class="name" id="pName">—</div>
+          <div class="meta" id="pEmail">—</div>
+          <div style="margin-top:8px; display:flex; gap:6px; flex-wrap:wrap">
+            <span class="tag" id="pJoined">⏰ —</span>
+            <span class="tag" id="pUid">🆔 —</span>
+          </div>
+        </div>
+        <div class="right">
+          <button id="btnEditName" class="pill">✏️ Name</button>
+          <button id="btnPassword" class="pill">🔒 Passwort</button>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats">
+        <div class="stat"><div class="n" id="sFav">0</div><span class="l">Favoriten</span></div>
+        <div class="stat"><div class="n" id="sRate">0</div><span class="l">Bewertungen</span></div>
+        <div class="stat"><div class="n" id="sCheck">0</div><span class="l">Check‑ins</span></div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2" style="margin-top:16px">
+      <!-- Favorites -->
+      <div class="card">
+        <div class="card-body">
+          <div class="card-title">Deine Favoriten</div>
+          <div class="small" style="margin-bottom:8px">Schnellzugriff auf gespeicherte Läden.</div>
+          <div id="favList" class="list"></div>
+        </div>
+      </div>
+
+      <!-- Recent ratings -->
+      <div class="card">
+        <div class="card-body">
+          <div class="card-title">Letzte Bewertungen</div>
+          <div class="small" style="margin-bottom:8px">Deine letzten 10 Bewertungen.</div>
+          <div id="rateList" class="list"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2" style="margin-top:16px">
+      <!-- Preferences -->
+      <div class="card">
+        <div class="card-body">
+          <div class="card-title">Einstellungen</div>
+          <div class="row" style="justify-content:space-between">
+            <div>
+              <div style="font-weight:800">Theme</div>
+              <div class="small">Hell / Dunkel für die Karte & Website</div>
+            </div>
+            <div class="right">
+              <button id="themeLight" class="pill">🌞 Light</button>
+              <button id="themeDark"  class="pill">🌙 Dark</button>
+            </div>
+          </div>
+          <hr style="border:none;border-top:1px solid var(--ring); margin:12px 0">
+          <div class="row" style="justify-content:space-between">
+            <div>
+              <div style="font-weight:800">Sprache</div>
+              <div class="small">DE / EN (wirkt auch auf der Karte)</div>
+            </div>
+            <div class="right">
+              <button id="langDe" class="pill">🇩🇪 DE</button>
+              <button id="langEn" class="pill">🇬🇧 EN</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Danger-ish -->
+      <div class="card">
+        <div class="card-body">
+          <div class="card-title">Sicherheit</div>
+          <div class="row" style="gap:8px; flex-wrap:wrap">
+            <button id="btnLogout2" class="pill">🚪 Logout</button>
+            <button id="btnPassword2" class="pill">🔒 Passwort zurücksetzen</button>
+          </div>
+          <div class="small" style="margin-top:8px">
+            Passwort zurücksetzen sendet dir eine E‑Mail mit einem sicheren Link.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="height:18px"></div>
+  </div>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <!-- Supabase -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script>
+    // === Config (same as your app) ===
+    const SUPABASE_URL  = 'https://bcxeaxhhhvagpvomtsyi.supabase.co';
+    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjeGVheGhoaHZhZ3B2b210c3lpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyNTUxMzcsImV4cCI6MjA3MDgzMTEzN30.HCnWgapZrDY4RIgdXM5eh2UkslFpSSuJwEUszZHtp0w';
+    const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+    // === Helpers ===
+    function showToast(msg, ms=3600){
+      const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+      setTimeout(()=> t.classList.remove('show'), ms);
+    }
+    function gravatar(email){
+      if(!email) return `https://api.dicebear.com/7.x/initials/svg?seed=Donerd`;
+      // tiny md5
+      const s = new TextEncoder().encode(email.trim().toLowerCase());
+      return crypto.subtle.digest('SHA-256', s).then(buf=>{
+        const hex=[...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
+        return `https://gravatar.com/avatar/${hex}?d=identicon`;
+      });
+    }
+    function euro(x){ return (x==null||!isFinite(x))?'—': new Intl.NumberFormat(document.documentElement.lang||'de',{style:'currency',currency:'EUR'}).format(x); }
+
+    // === UI refs ===
+    const pName  = document.getElementById('pName');
+    const pEmail = document.getElementById('pEmail');
+    const pUid   = document.getElementById('pUid');
+    const pJoined= document.getElementById('pJoined');
+    const pAvatar= document.getElementById('pAvatar');
+    const sFav   = document.getElementById('sFav');
+    const sRate  = document.getElementById('sRate');
+    const sCheck = document.getElementById('sCheck');
+    const favList= document.getElementById('favList');
+    const rateList=document.getElementById('rateList');
+
+    // === Nav / actions ===
+    document.getElementById('btnHome').onclick   = ()=> location.href='index.html';
+    document.getElementById('btnLogout').onclick = doLogout;
+    document.getElementById('btnLogout2').onclick= doLogout;
+
+    document.getElementById('btnPassword').onclick  = resetPassword;
+    document.getElementById('btnPassword2').onclick = resetPassword;
+
+    document.getElementById('btnEditName').onclick = async ()=>{
+      const current = pName.textContent.trim();
+      const next = prompt('Neuer Anzeigename:', current);
+      if(!next || next===current) return;
+      try{
+        const { data: { user } } = await supa.auth.getUser();
+        if(!user) throw new Error('Nicht eingeloggt');
+        await supa.from('profiles').upsert({ id:user.id, display_name: next }, { onConflict:'id' });
+        pName.textContent = next;
+        showToast('✅ Name aktualisiert');
+      }catch(e){ console.warn(e); showToast('Konnte Name nicht speichern'); }
+    };
+
+    document.getElementById('themeLight').onclick = ()=>{ document.documentElement.setAttribute('data-theme','light'); localStorage.setItem('theme','light'); showToast('🌞 Light Theme'); };
+    document.getElementById('themeDark').onclick  = ()=>{ document.documentElement.setAttribute('data-theme','dark');  localStorage.setItem('theme','dark');  showToast('🌙 Dark Theme'); };
+
+    document.getElementById('langDe').onclick = ()=>{ document.documentElement.lang='de'; localStorage.setItem('lang','de'); showToast('🇩🇪 Sprache: DE'); };
+    document.getElementById('langEn').onclick = ()=>{ document.documentElement.lang='en'; localStorage.setItem('lang','en'); showToast('🇬🇧 Language: EN'); };
+
+    async function doLogout(){
+      await supa.auth.signOut();
+      location.replace('index.html');
+    }
+
+    async function resetPassword(){
+      const { data: { user } } = await supa.auth.getUser();
+      if(!user?.email) return showToast('Keine E‑Mail gefunden');
+      try{
+        await supa.auth.resetPasswordForEmail(user.email, { redirectTo: location.origin });
+        showToast('📨 Passwort‑Link gesendet');
+      }catch(e){ console.warn(e); showToast('Konnte E‑Mail nicht senden'); }
+    }
+
+    // === Data loading ===
+    (async ()=>{
+      // Theme from your app
+      const pref = localStorage.getItem('theme') || 'light';
+document.documentElement.setAttribute('data-theme', pref);
+
+      const lang = localStorage.getItem('lang');  if(lang) document.documentElement.lang = lang;
+
+      const { data: { session } } = await supa.auth.getSession();
+      const u = session?.user;
+      if(!u){ location.replace('index.html'); return; }
+
+      // Name / email
+      const display = u.user_metadata?.first_name
+        || u.user_metadata?.user_name
+        || u.user_metadata?.full_name
+        || (u.email ? u.email.split('@')[0] : 'User');
+      pName.textContent  = display;
+      pEmail.textContent = u.email || '—';
+      pUid.textContent   = '🆔 ' + u.id.slice(0,8) + '…';
+      pJoined.textContent= '⏰ ' + new Date(u.created_at).toLocaleDateString(document.documentElement.lang||'de');
+
+      pAvatar.src = await gravatar(u.email);
+
+      // Stats: favorites
+      let favIds=[];
+      try{
+        const { data: favs } = await supa.from('favorites').select('shop_id').eq('user_id', u.id);
+        favIds = (favs||[]).map(r=> String(r.shop_id));
+        sFav.textContent = favIds.length;
+      }catch(_){ sFav.textContent='0'; }
+
+      // Stats: ratings
+      try{
+        const { count } = await supa.from('shop_ratings')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', u.id);
+        sRate.textContent = count ?? 0;
+      }catch(_){ sRate.textContent='0'; }
+
+      // Stats: check‑ins (local only)
+      try{
+        const ci = JSON.parse(localStorage.getItem('checkins')||'{}');
+        const n = Object.values(ci).filter(Boolean).length;
+        sCheck.textContent = n;
+      }catch(_){ sCheck.textContent='0'; }
+
+      // Favorites list (with shop join)
+      favList.innerHTML = '<div class="small">Lade Favoriten…</div>';
+      if(favIds.length){
+        const { data: shops } = await supa.from('shops')
+          .select('id,name,address,lat,lng,image_urls,price_kebap,price_durum,price_box,vegetarian,payment_cards')
+          .in('id', favIds);
+        renderFavs(shops||[]);
+      }else{
+        favList.innerHTML = '<div class="small">Noch keine Favoriten.</div>';
+      }
+
+      // Recent ratings
+      rateList.innerHTML = '<div class="small">Lade Bewertungen…</div>';
+      const { data: ratings } = await supa.from('shop_ratings')
+        .select('shop_id,rating,comment,created_at,shops(name,address,image_urls)')
+        .eq('user_id', u.id)
+        .order('created_at', { ascending:false })
+        .limit(10);
+      renderRatings(ratings||[]);
+    })();
+
+    function renderFavs(arr){
+      if(!arr.length){ favList.innerHTML = '<div class="small">Noch keine Favoriten.</div>'; return; }
+      favList.innerHTML = arr.map(s=>{
+        const img = (s.image_urls && s.image_urls.length) ? s.image_urls[0] : `https://picsum.photos/seed/${encodeURIComponent(s.name||s.id)}/400/300`;
+        return `
+          <div class="item">
+            <img class="thumb" src="${img}" alt="">
+            <div>
+              <div class="title">${s.name||'—'}</div>
+              <div class="sub">${s.address||''}</div>
+              <div class="chips">
+                ${s.vegetarian?'<span class="chip">🥬 Vegetarisch</span>':''}
+                ${s.payment_cards?'<span class="chip">💳 Karten</span>':''}
+                <span class="chip">🥙 ${euro(s.price_kebap)}</span>
+                <span class="chip">🌯 ${euro(s.price_durum)}</span>
+                <span class="chip">📦 ${euro(s.price_box)}</span>
+              </div>
+            </div>
+            <div class="right">
+              <button class="pill primary" onclick="window.location.href='index.html'">🗺️ Karte</button>
+              <button class="pill" onclick="window.open('https://maps.google.com/?q=${s.lat},${s.lng}','_blank','noopener')">🧭 Route</button>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    function renderRatings(arr){
+      if(!arr.length){ rateList.innerHTML = '<div class="small">Noch keine Bewertungen.</div>'; return; }
+      rateList.innerHTML = arr.map(r=>{
+        const s = r.shops || {};
+        const img = (s.image_urls && s.image_urls.length) ? s.image_urls[0] : `https://picsum.photos/seed/${encodeURIComponent(s.name||r.shop_id)}/400/300`;
+        const when = new Date(r.created_at).toLocaleDateString(document.documentElement.lang||'de');
+        const stars = '★'.repeat(Math.max(1,Math.min(5,Math.round(r.rating||0))));
+        return `
+          <div class="item">
+            <img class="thumb" src="${img}" alt="">
+            <div>
+              <div class="title">${s.name||'—'} <span class="small">· ${when}</span></div>
+              <div class="chips"><span class="chip">⭐ ${stars}</span>${r.comment?`<span class="chip">💬 ${escapeHtml(r.comment)}</span>`:''}</div>
+              <div class="sub">${s.address||''}</div>
+            </div>
+            <div class="right">
+              <button class="pill primary" onclick="window.location.href='index.html'">🗺️ Karte</button>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;' }[m])); }
+  </script>
+</body>
+</html>

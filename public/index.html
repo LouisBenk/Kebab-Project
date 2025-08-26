@@ -1,0 +1,1862 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <title>Dönerd – Kebab Finder</title>
+
+  <!-- Leaflet & MarkerCluster -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <style>
+    /* --- toast --- */
+#donerdToast{
+  position:fixed; left:50%; bottom:22px; transform:translateX(-50%);
+  background:#111; color:#fff; border-radius:999px; padding:10px 14px;
+  box-shadow:0 6px 18px rgba(0,0,0,.35); z-index:1400; display:none; font-weight:800
+}
+html[data-theme="dark"] #donerdToast{ background:#0f172a }
+#donerdToast.show{ display:block; animation:toastfade .25s ease both }
+@keyframes toastfade{ from{opacity:0; transform:translate(-50%,8px)} to{opacity:1; transform:translate(-50%,0)} }
+
+    .donerd-input{
+  width:100%;
+  padding:10px;
+  border-radius:10px;
+  border:1px solid var(--ring);
+  background:transparent;
+  color:var(--text);
+  font:inherit;
+}
+
+    /* === Rating modal === */
+#rateOverlay{
+  position:fixed; inset:0; display:none;
+  align-items:center; justify-content:center;
+  background:rgba(0,0,0,.45); z-index:1200;
+}
+#rateOverlay.open{ display:flex; }
+
+#rateModal{
+  width:min(420px,92vw);
+  background:var(--card); color:var(--text);
+  border:1px solid var(--ring); border-radius:14px;
+  box-shadow:0 12px 30px rgba(0,0,0,.35);
+  padding:16px;
+}
+
+.rate-head{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.rate-title{ font-weight:900; font-size:18px; }
+
+.rate-stars{ display:flex; gap:8px; margin:12px 0; }
+.star-btn{
+  width:36px; height:36px; border-radius:8px; border:1px solid var(--ring);
+  display:grid; place-items:center; cursor:pointer; font-size:18px;
+  background:var(--card);
+}
+.star-btn.on{ background:#fff7ed; border-color:#fed7aa; color:#b45309; }
+html[data-theme="dark"] .star-btn.on{ background:#2a1709; border-color:#7a4b27; color:#f59e0b; }
+
+#rateComment{
+  width:100%; min-height:72px; resize:vertical;
+  padding:8px 10px; border-radius:10px; border:1px solid var(--ring);
+  background:transparent; color:var(--text); font:inherit;
+}
+
+.rate-actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:12px; }
+.rate-btn{
+  border:0; border-radius:999px; padding:8px 14px; font-weight:800; cursor:pointer;
+}
+.rate-cancel{ background:#e5e7eb; color:#111; }
+html[data-theme="dark"] .rate-cancel{ background:#1f2937; color:#e5e7eb; }
+.rate-submit{
+  background:var(--accent); color:#000; box-shadow:0 6px 16px rgba(249,115,22,.35);
+}
+.rate-submit:disabled{ opacity:.6; cursor:not-allowed; box-shadow:none; }
+
+    /* === Favorites (heart buttons) === */
+    .pop-footer{ display:flex; justify-content:flex-end; margin-top:8px; }
+.pop-more{
+  border:0; border-radius:999px; padding:6px 10px; font-weight:800;
+  background:var(--accent); color:#000; cursor:pointer;
+  box-shadow:0 4px 12px rgba(249,115,22,.35);
+}
+.pop-more:hover{ filter:brightness(0.98); }
+.fav-btn{
+  display:inline-grid; place-items:center;
+  width:34px; height:34px; border-radius:999px; border:1px solid var(--ring);
+  background:var(--card); box-shadow:0 2px 8px rgba(0,0,0,.12);
+  cursor:pointer; font-size:16px; color:#ef4444;
+}
+.fav-btn.is-on{ background:#fee2e2; border-color:#fecaca; }
+.mini-card .fav-wrap{ position:absolute; right:8px; top:8px; }
+.mini-card{ position:relative; }
+.side-item .fav-btn{ margin-left:6px; }
+
+    /* Compact controls bar (no inputs) */
+.side-controls--compact{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:10px 12px; border-bottom:1px solid var(--ring);
+}
+.side-hint{ color:var(--muted); font-size:12px }
+
+/* Thumbnail layout in list items */
+/* Sidebar item – tidy, airy, consistent with the rest */
+.side-item{
+  display:grid;
+  grid-template-columns: 76px 1fr;
+  gap:12px;
+  align-items:start;
+  background:var(--card);
+  border:1px solid var(--ring);
+  border-radius:16px;
+  padding:12px;
+  margin:10px 6px;
+  box-shadow:0 1px 3px rgba(0,0,0,.06);
+}
+
+.side-thumb{
+  width:76px; height:76px; border-radius:12px;
+  object-fit:cover; background:#0002;
+}
+
+.side-main{ display:grid; gap:6px; min-width:0 }
+.side-name{
+  font-weight:900; line-height:1.2;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.side-addr{ color:var(--muted); font-size:12px }
+
+.side-ratings, .side-prices, .side-meta{ display:flex; flex-wrap:wrap; gap:6px }
+
+.side-prices .price-pill{
+  padding:6px 10px; border-radius:12px; font-weight:800;
+}
+
+.meta-pill{
+  display:inline-flex; align-items:center; gap:6px;
+  padding:6px 10px; border-radius:999px;
+  background:var(--chip); color:var(--chipText); border:1px solid var(--ring);
+  font-weight:800; font-size:12px;
+}
+
+.side-cta{
+  justify-self:end; margin-top:4px;
+  background:var(--accent); color:#000; border:0;
+  border-radius:999px; padding:8px 14px; font-weight:800;
+  box-shadow:0 4px 12px rgba(249,115,22,.35); cursor:pointer;
+}
+.side-cta:hover{ background:var(--accent-strong) }
+
+    :root{
+      --bg:#f0f0f0; --text:#111; --muted:#6b7280; --card:#fff;
+      --ring:#e5e7eb; --chip:#eef0f3; --chipText:#0f172a;
+      --accent:#fb923c; --accent-strong:#f97316;
+      --shadow:0 4px 16px rgba(0,0,0,.12);
+    }
+    :root{
+  --topbar-h: 64px;
+  --gap-top: 16px;
+}
+@media (max-width: 600px){
+  :root{ --topbar-h: 56px; }
+}
+    html[data-theme="dark"]{
+      --bg:#0b0f14; --text:#e5e7eb; --muted:#9aa4b2; --card:#0f172a;
+      --ring:#1f2937; --chip:#0b1220; --chipText:#e5e7eb;
+      --accent:#fb923c; --accent-strong:#f97316;
+      --shadow:0 8px 24px rgba(0,0,0,.45);
+    }
+    html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:Arial,sans-serif}
+    button{font:inherit}
+
+    /* ===== Topbar ===== */
+    #navbar{
+  position:fixed;
+  top:0; left:0; right:0;
+  height:var(--topbar-h);
+  display:flex; align-items:center; justify-content:center;
+  padding:0 8px; z-index:1000; background:transparent;
+}
+@media (max-width: 600px){
+  #navbar{
+    height: 52px;
+    padding: 0 6px;
+  }
+  .brand{ font-size: 20px; }
+  .searchbar{ min-width: 0; max-width: 100%; }
+  .right-actions{ gap: 6px; }
+  .action-pill span:last-child{ display: none; } /* hide button text, keep icons */
+}
+
+    .nav-inner{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .brand{display:flex;align-items:center;gap:10px;font-weight:900;font-size:28px;padding-left:6px;flex:0 0 auto}
+    .brand .dot{width:12px;height:12px;border-radius:50%;background:#ff385c;display:inline-block}
+
+    .searchbar{flex:1;display:flex;align-items:center;background:var(--card);border-radius:999px;box-shadow:var(--shadow);padding:6px;min-width:240px;max-width:620px;border:1px solid var(--ring)}
+    .search-seg{flex:1;display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:999px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .search-seg:hover{background:rgba(0,0,0,.04)}
+    html[data-theme="dark"] .search-seg:hover{background:rgba(255,255,255,.05)}
+    .seg-icon{width:20px;height:20px;display:inline-grid;place-items:center;border-radius:6px;background:#f3f4f6;font-size:14px}
+    html[data-theme="dark"] .seg-icon{background:#111827;color:#e5e7eb}
+    .seg-input{flex:1;display:flex;align-items:center;gap:8px;min-width:0}
+    .seg-input input{width:100%;border:0;outline:0;background:transparent;color:var(--text);font:inherit}
+
+    .right-actions{display:flex;align-items:center;gap:10px;margin-left:12px}
+    .action-pill{display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--card);border:1px solid var(--ring);border-radius:999px;box-shadow:0 2px 8px rgba(0,0,0,.06);font-weight:700;white-space:nowrap;cursor:pointer;color:var(--text)}
+    .action-pill:hover{background:rgba(0,0,0,.04)}
+    html[data-theme="dark"] .action-pill:hover{background:rgba(255,255,255,.05)}
+    .action-icon{width:18px;height:18px;display:inline-grid;place-items:center;border-radius:50%;background:#f3f4f6;font-size:12px;color:#374151}
+    html[data-theme="dark"] .action-icon{background:#111827;color:#e5e7eb}
+
+    .lang-toggle{display:inline-flex;background:var(--card);border:1px solid var(--ring);border-radius:999px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+    .lang-toggle button{min-width:60px;padding:8px 12px;font-weight:800;border:0;background:transparent;cursor:pointer;line-height:1;color:var(--text)}
+    .lang-toggle button+button{border-left:1px solid var(--ring)}
+    .lang-toggle button.is-active{background:var(--accent);color:#000}
+
+    /* Map */
+    #map{
+  position:fixed;
+  left:0; right:0;
+  top:calc(var(--topbar-h) + var(--gap-top));
+  border-radius:10px; overflow:hidden;
+  box-shadow:0 4px 12px rgba(0,0,0,.2);
+  height:calc(100vh - var(--topbar-h) - var(--gap-top) - env(safe-area-inset-bottom, 0px));
+}
+@supports (height: 100dvh){
+  #map{
+    height:calc(100dvh - var(--topbar-h) - var(--gap-top) - env(safe-area-inset-bottom, 0px));
+  }
+}
+
+
+    /* Geolocation button */
+    .locate-btn{
+  position:fixed;
+  top:calc(var(--topbar-h) + var(--gap-top) + 12px);
+  right:24px;
+  z-index:1002; width:60px; height:60px; border-radius:16px;
+  background:var(--card); border:1px solid var(--ring);
+  display:grid; place-items:center; font-size:28px;
+  box-shadow:0 6px 14px rgba(0,0,0,.28); cursor:pointer; color:var(--text);
+}
+
+    .locate-btn:hover{transform:scale(1.04)}
+
+    /* ===== LEFT RIBBON SIDEBAR ===== */
+    #sidebar{
+  position:fixed;
+  top:calc(var(--topbar-h) + var(--gap-top));
+  bottom:calc(env(safe-area-inset-bottom, 0px) + 12px);
+  left:0; width:340px; max-width:92vw;
+  background:var(--card); border-right:1px solid var(--ring);
+  border-radius:0 12px 12px 0; box-shadow:0 8px 24px rgba(0,0,0,.15);
+  z-index:1001; display:flex; flex-direction:column; overflow:hidden;
+  transition:transform .25s ease;
+}
+@media (max-width: 600px){
+  #sidebar{
+    width: 85vw;            /* drawer ~85% of screen */
+    max-width: 85vw;
+  }
+  body:not(.side-collapsed) #map{
+    left: 0;                /* map always full width */
+  }
+}
+
+
+    body.side-collapsed #sidebar{transform:translateX(-102%);}
+    #sideTab{position:absolute;top:120px;left:0;transform:translateX(-50%);z-index:1001;background:var(--card);border:1px solid var(--ring);border-radius:12px;box-shadow:0 6px 16px rgba(0,0,0,.2);padding:8px 10px;cursor:pointer;display:none}
+    body.side-collapsed #sideTab{display:block}
+
+    .side-header{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--ring)}
+    .side-title{font-weight:900}
+    .side-controls{display:flex;flex-wrap:wrap;gap:8px;padding:10px 12px;border-bottom:1px solid var(--ring)}
+    .side-controls .pill{display:flex;align-items:center;gap:8px;background:var(--chip);border:1px solid var(--ring);border-radius:999px;padding:6px 10px}
+    .side-controls input{width:80px;border:0;outline:0;background:transparent;color:var(--text)}
+    .side-controls select{border:0;background:transparent;color:var(--text);font-weight:700}
+    .side-list{overflow:auto;padding:8px 8px 12px;flex:1}
+    .side-item{background:var(--card);border:1px solid var(--ring);border-radius:12px;padding:10px 12px;margin:8px 4px;box-shadow:0 1px 3px rgba(0,0,0,.06);cursor:pointer}
+    .side-item:hover{outline:2px solid rgba(249,115,22,.35)}
+    .side-name{font-weight:900;margin:0 0 4px 0}
+    .side-addr{color:var(--muted);font-size:12px;margin-bottom:6px}
+    .pill-row{display:flex;gap:6px;flex-wrap:wrap}
+    .price-pill{display:inline-flex;align-items:baseline;gap:6px;background:#f8fafc;color:#0f172a;border:1px solid var(--ring);border-radius:12px;padding:6px 8px;font-weight:800}
+    html[data-theme="dark"] .price-pill{background:#0b1220;color:#e5e7eb}
+
+    /* Rating pills (SWAPPED colors: user = yellow, admin = blue) */
+    .rating-pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:6px 10px;font-weight:800;border:1px solid}
+    .rating-user{background:#fff7ed;color:#7c2d12;border-color:#fed7aa}
+    html[data-theme="dark"] .rating-user{background:#2a1709;color:#ffd2a1;border-color:#7a4b27}
+    .rating-admin{background:#e0f2fe;color:#0c4a6e;border-color:#7dd3fc}
+    html[data-theme="dark"] .rating-admin{background:#072534;color:#93c5fd;border-color:#1e3a8a}
+    .star{font-weight:900}
+    .star-user{color:#f59e0b}
+    .star-admin{color:#06b6d4}
+
+    .go-btn{margin-left:auto;background:var(--accent);color:#000;border:0;border-radius:999px;padding:6px 10px;font-weight:800;cursor:pointer}
+
+    /* ===== Modal (filters) ===== */
+    #modalOverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1003;justify-content:center;align-items:flex-end;padding:24px}
+    #modal{width:min(680px,96vw);max-height:88vh;overflow:auto;background:var(--card);border-radius:20px 20px 0 0;padding:18px 18px 24px;box-shadow:0 8px 24px rgba(0,0,0,.25);color:var(--text);border:1px solid var(--ring)}
+    .modal-header{display:flex;align-items:center;justify-content:space-between}
+    .modal-title{font-weight:800;font-size:28px}
+    .modal-reset{background:#eef2f7;border:1px solid var(--ring);border-radius:999px;padding:8px 14px;cursor:pointer}
+    .section{margin-top:18px}
+    .section h4{margin:0 0 10px;font-size:16px}
+    .chip-row{display:flex;flex-wrap:wrap;gap:10px}
+    .chip{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;background:var(--chip);color:var(--chipText);border:1px solid var(--ring);cursor:pointer;user-select:none}
+    .chip input{display:none}
+    .chip.active{background:rgba(249,115,22,.16);border-color:rgba(249,115,22,.35)}
+    .pill{display:flex;align-items:center;gap:10px;background:var(--chip);border:1px solid var(--ring);border-radius:14px;padding:10px 12px}
+    .pill .value{margin-left:auto;font-weight:900}
+    .slider{width:100%}
+    .subtle{color:var(--muted);font-size:12px}
+    .modal-actions{margin-top:22px;display:flex;justify-content:center}
+    #applyBtn{width:100%;max-width:420px;background:var(--accent);color:#000;font-weight:800;font-size:18px;border:none;border-radius:999px;padding:14px 18px;cursor:pointer;box-shadow:0 6px 16px rgba(249,115,22,.35)}
+    .hidden{display:none}
+    .modal-top{display:flex;align-items:center;gap:12px}
+    .bubble{display:inline-flex;align-items:center;gap:6px;background:#f8fafc;border:1px solid var(--ring);border-radius:999px;padding:6px 10px}
+    .ok{color:#16a34a;font-weight:900}
+    .pill-group{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+    @media (max-width:820px){ .pill-group{grid-template-columns:1fr} }
+
+    /* Cluster pins */
+    .cluster-icon{position:relative;width:34px;height:44px}
+    .cluster-icon .pin{position:absolute;left:3px;top:6px;width:28px;height:28px;border-radius:50%;background:var(--accent);border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35)}
+    .cluster-icon .pin::after{content:"";position:absolute;left:12px;top:24px;width:6px;height:10px;background:var(--accent);transform:rotate(45deg);border-bottom-left-radius:6px;box-shadow:0 1px 2px rgba(0,0,0,.25)}
+    .cluster-icon .badge{position:absolute;right:-8px;top:-2px;min-width:18px;height:18px;padding:0 4px;font-size:12px;font-weight:800;line-height:18px;text-align:center;color:#fff;background:#111;border:2px solid #fff;border-radius:999px;box-shadow:0 2px 6px rgba(0,0,0,.35)}
+
+    /* ====== COMPACT POPUP CARD (clean) ====== */
+.donerd-popup .leaflet-popup-content-wrapper{
+  background:var(--card); color:var(--text);
+  border:1px solid var(--ring); border-radius:16px;
+  box-shadow:0 14px 32px rgba(0,0,0,.25);
+}
+.donerd-popup .leaflet-popup-tip{
+  background:var(--card); border:1px solid var(--ring);
+}
+@media (max-width: 600px){
+  .pop-card{
+    grid-template-columns: 1fr;   /* stack vertically */
+    width: 92vw;
+  }
+  .pop-media img{
+    width: 100%; height: auto;
+  }
+}
+
+
+.pop-card{ display:grid; grid-template-columns:120px 1fr; gap:12px; width:min(360px,92vw); }
+.pop-media{ position:relative; }
+.pop-media img{ width:120px; height:100px; object-fit:cover; border-radius:12px; background:#0002; }
+.pop-head .fav-btn{ margin-left:6px; }
+
+.pop-head{ display:flex; align-items:center; gap:8px; }
+.pop-title{ font-weight:900; font-size:16px; line-height:1.15; flex:1; min-width:0; }
+.pop-rating{ display:inline-flex; align-items:center; gap:6px;
+  padding:6px 10px; border-radius:999px; font-weight:800; font-size:12px;
+  background:#fff7ed; color:#7c2d12; border:1px solid #fed7aa;
+}
+
+.pop-prices{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; margin-top:6px; }
+.pop-pill{
+  display:inline-flex; align-items:center; gap:6px; justify-content:center;
+  padding:6px 10px; border-radius:12px; font-weight:800;
+  background:#f8fafc; color:#0f172a; border:1px solid var(--ring);
+}
+html[data-theme="dark"] .pop-pill{ background:#0b1220; color:#e5e7eb; }
+
+.pop-tags{
+  display:flex; gap:6px; flex-wrap:nowrap; align-items:center;
+  margin-top:6px; overflow:hidden;
+}
+.pop-tag{
+  display:inline-flex; align-items:center; gap:6px;
+  padding:4px 8px; border-radius:999px; font-weight:800; font-size:11px;
+  background:var(--chip); color:var(--chipText); border:1px solid var(--ring);
+  white-space:nowrap;
+}
+
+/* Herz-Button wiederverwenden */
+.fav-btn{ display:inline-grid; place-items:center; width:32px; height:32px;
+  border-radius:999px; border:1px solid var(--ring); background:var(--card);
+  box-shadow:0 2px 8px rgba(0,0,0,.12); cursor:pointer; color:#ef4444;
+}
+.fav-btn.is-on{ background:#fee2e2; border-color:#fecaca; }
+
+    /* Empty overlay */
+    .empty{position:absolute;top:92px;left:50%;transform:translateX(-50%);z-index:1002;background:var(--card);border:1px solid var(--ring);border-radius:14px;box-shadow:0 10px 24px rgba(0,0,0,.2);padding:10px 12px;display:flex;gap:10px;align-items:center;color:var(--text)}
+    .empty .btn{background:var(--accent);color:#000;border:none;border-radius:999px;padding:6px 10px;font-weight:800;cursor:pointer}
+    .empty.hidden{display:none}
+
+    @media (max-width:920px){
+      body:not(.side-collapsed) #map{left:0;}
+      #sidebar{width:92vw}
+    }
+
+    /* ======= Bottom Sheet (detail view) ======= */
+    #detailOverlay{position:fixed;inset:0;display:none;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.45);z-index:1100}
+    #detailOverlay.open{display:flex}
+    #detailSheet{width:min(820px,96vw);max-height:90vh;background:var(--card);border:1px solid var(--ring);border-radius:18px 18px 0 0;box-shadow:0 12px 30px rgba(0,0,0,.35);overflow:auto}
+    .sheet-head{padding:12px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--ring)}
+    .sheet-title{font-size:20px;font-weight:900}
+    .sheet-sub{color:var(--muted);font-size:13px}
+    .sheet-hero{position:relative;width:100%;height:220px;overflow-x:auto;display:flex;gap:6px;scroll-snap-type:x mandatory;background:#0002}
+    .sheet-hero img{height:220px;width:auto;object-fit:cover;border-radius:10px;scroll-snap-align:center}
+    .actions-row{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:12px;
+  padding:14px;
+  border-bottom:1px solid var(--ring);
+}
+.action-card{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  align-items:center;
+  justify-content:center;
+  padding:14px 10px;
+  border-radius:14px;
+  background:#fff;
+  border:1px solid var(--ring);
+  box-shadow:0 3px 8px rgba(0,0,0,.08);
+  cursor:pointer;
+  transition:all .2s ease;
+}
+html[data-theme="dark"] .action-card{
+  background:#1f2937;
+  border-color:#374151;
+}
+.action-card:hover{
+  transform:translateY(-2px);
+  box-shadow:0 6px 14px rgba(0,0,0,.15);
+  background:var(--accent);
+  color:#000;
+}
+.action-card span:first-child{
+  font-size:20px;
+}
+.action-card small{
+  font-weight:700;
+  font-size:13px;
+}
+    .sheet-sec{padding:12px 14px}
+    .checkin-wrap{padding:12px 14px;border-top:1px solid var(--ring)}
+    .checkin-btn{width:100%;border:none;border-radius:999px;padding:14px 18px;background:var(--accent);color:#000;font-weight:900;box-shadow:0 8px 20px rgba(249,115,22,.35);cursor:pointer}
+    .checkin-btn.done{background:#16a34a;color:#fff;box-shadow:0 8px 20px rgba(22,163,74,.35)}
+/* Comfortable hit area on touch */
+button, .action-pill, .chip, .fav-btn, .side-cta, .pop-more{ min-height:44px; }
+img{ max-width:100%; height:auto; }
+#map{ touch-action: pan-x pan-y; }
+
+@media (max-width: 420px){
+  .action-pill{ padding:6px 10px; font-size:14px; }
+  .searchbar{ max-width: unset; }
+  .side-item{ grid-template-columns: 64px 1fr; gap:10px; }
+  .side-thumb{ width:64px; height:64px; }
+}
+@media (max-width: 600px){
+  .right-actions{ display: none; }
+  #mobileMenuBtn{ display:inline-block !important; }
+}
+/* ===== MOBILE APP LAYOUT (phones) ===== */
+@media (max-width: 600px){
+  :root{
+    --topbar-h: 52px;
+    --gap-top: 8px;
+  }
+
+  /* Top bar */
+  #navbar{
+    height:var(--topbar-h);
+    padding:0 8px;
+    background:rgba(15,23,42,.88);
+    backdrop-filter: blur(10px);
+    border-bottom:1px solid var(--ring);
+  }
+  html[data-theme="light"] #navbar{ background:rgba(255,255,255,.88); }
+  .brand{ font-size:20px; padding-left:2px; }
+  .searchbar{ min-width:0; max-width:100%; padding:4px; border-radius:12px; }
+  .search-seg{ padding:8px 10px; }
+  .seg-icon{ width:18px; height:18px; font-size:12px; }
+
+  /* Compact action pills (icon only) */
+  .right-actions{ gap:6px; }
+  .action-pill{ padding:8px 10px; }
+  .action-pill span:last-child{ display:none; }
+
+  /* Drawer behavior */
+  #sidebar{
+    width:86vw; max-width:86vw;
+    border-radius:0 14px 14px 0;
+    box-shadow:0 12px 28px rgba(0,0,0,.36);
+    transform:translateX(-102%);
+  }
+  body.side-collapsed #sidebar{ transform:translateX(-102%); }
+  body:not(.side-collapsed) #sidebar{ transform:translateX(0); }
+
+  /* Map height = full screen minus top bar & safe area */
+  #map{
+    top: calc(var(--topbar-h) + var(--gap-top));
+    height: calc(100dvh - var(--topbar-h) - var(--gap-top) - env(safe-area-inset-bottom,0px));
+    border-radius:8px;
+  }
+
+  /* Floating locate button */
+  .locate-btn{
+    top: calc(var(--topbar-h) + var(--gap-top) + 10px);
+    right:14px; width:52px; height:52px; border-radius:14px;
+  }
+
+  /* Bottom nav */
+  #bottomNav{
+    position:fixed; left:0; right:0; bottom:0;
+    height:56px;
+    display:grid; grid-template-columns:repeat(3,1fr);
+    background:var(--card); color:var(--text);
+    border-top:1px solid var(--ring);
+    z-index:1200;
+    padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  #bottomNav button{
+    background:transparent; border:0;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    font-weight:800; gap:2px; min-height:56px; cursor:pointer;
+  }
+  #bottomNav small{ font-size:10px; opacity:.85 }
+}
+
+/* Slightly rounder pills globally */
+.action-pill{ border-radius:14px; }
+
+</style>
+</head>
+<body class="side-collapsed">
+  <!-- ===== Topbar ===== -->
+  <div id="navbar">
+    <div class="nav-inner">
+      <div class="brand" aria-label="Dönerd">
+        <span class="dot"></span><span>Dönerd</span>
+      </div>
+
+      <div class="searchbar" role="group" aria-label="Primary actions">
+        <div class="search-seg" id="seg-looking">
+          <span class="seg-icon" aria-hidden="true">🏠</span>
+          <label class="seg-input" for="searchInput">
+            <input id="searchInput" type="text" placeholder="Suche nach Name, Straße, Tags … (z.B. falafel, scharf)" aria-label="Kebab-Läden suchen" />
+          </label>
+        </div>
+      </div>
+
+      <div class="right-actions">
+        <button class="action-pill" id="filterBtn" title="Filter"><span class="action-icon">⚙️</span><span>Filter</span></button>
+        <button class="action-pill" id="themeBtn" title="Dark mode">
+          <span class="action-icon" id="themeIcon">🌙</span><span id="themeText">Dark</span>
+        </button>
+        <button class="action-pill" onclick="location.href='add-shop.html'" title="Shop hinzufügen"><span class="action-icon">➕</span><span>Shop hinzufügen</span></button>
+        <button class="action-pill" onclick="location.href='feedback.html'" title="Feedback"><span class="action-icon">💬</span><span>Feedback</span></button>
+        <button class="action-pill" onclick="location.href='selection.html'" title="Preisliste"><span class="action-icon">📋</span><span>Preisliste</span></button>
+        <button class="action-pill" onclick="location.href='about.html'" title="Über mich"><span class="action-icon">👤</span><span>Über mich</span></button>
+        <div class="lang-toggle" role="group" aria-label="Language">
+          <button class="action-pill" id="loginBtn" title="Login">
+  <span class="action-icon">🔑</span><span id="loginText">Login</span>
+</button>
+          <button type="button" data-lang="de" aria-pressed="true" class="is-active">DE</button>
+          <button type="button" data-lang="en" aria-pressed="false">EN</button>
+        </div>
+      </div>
+      <button id="mobileMenuBtn" class="action-pill" style="display:none">☰</button>
+<div id="mobileMenu" class="hidden" style="position:absolute;top:52px;right:8px;background:var(--card);border:1px solid var(--ring);border-radius:12px;box-shadow:var(--shadow);z-index:2000">
+  <button onclick="location.href='add-shop.html'">➕ Shop hinzufügen</button>
+  <button onclick="location.href='feedback.html'">💬 Feedback</button>
+  <button onclick="location.href='selection.html'">📋 Preisliste</button>
+  <button onclick="location.href='about.html'">👤 Über mich</button>
+</div>
+
+    </div>
+  </div>
+
+  <!-- ===== LEFT SIDEBAR ===== -->
+  <div id="sidebar" aria-label="Preisliste">
+    <div class="side-header">
+      <div class="side-title" data-i18n="sidebar.title">Preisliste</div>
+      <div style="margin-left:auto"></div>
+      <button id="sideHide" class="action-pill" title="Verbergen"><span class="action-icon">⬅️</span><span data-i18n="sidebar.hide">Schließen</span></button>
+    </div>
+
+    <div class="side-controls side-controls--compact">
+  <div class="side-hint">
+    <span id="sideMatchCount">—</span>
+  </div>
+  <button id="openFilters" class="action-pill" title="Filter öffnen">
+    <span class="action-icon">⚙️</span><span data-i18n="nav.filter">Filter</span>
+  </button>
+</div>
+    <div id="sideList" class="side-list" role="list"></div>
+  </div>
+  <button id="sideTab" title="Preisliste"><span>📋</span></button>
+
+  <!-- ===== Map & Geo ===== -->
+  <div id="map"></div>
+  <button class="locate-btn" id="locateBtn" title="Meine Position">📍</button>
+
+  <!-- ===== Empty overlay ===== -->
+  <div id="emptyOverlay" class="empty hidden" aria-live="polite">
+    <b>😕</b><span id="emptyText">Keine Treffer. Filter zurücksetzen?</span>
+    <button id="emptyReset" class="btn">Reset</button>
+  </div>
+
+  <!-- ===== Filter Modal (NEW LOOK, same IDs) ===== -->
+  <div id="modalOverlay">
+    <div id="modal" role="dialog" aria-modal="true" aria-labelledby="filterTitle">
+      <div class="modal-header">
+        <div class="modal-top">
+          <div>
+            <div id="filterTitle" class="modal-title" data-i18n="modal.title">Filter</div>
+            <div class="subtle" data-i18n="modal.subtitle">Feinjustiere deine Suche nach Tag, Kategorie und Preis.</div>
+          </div>
+        </div>
+        <div class="bubble"><span class="ok">●</span><span id="matchHint">–</span></div>
+        <button class="modal-reset" id="resetBtn" data-i18n="modal.clear">Löschen</button>
+      </div>
+
+      <hr style="border:none;border-top:1px solid var(--ring);margin:12px 0" />
+
+      <div class="section">
+        <h4 data-i18n="rec.title">Für dich empfohlen</h4>
+        <div class="chip-row">
+          <label class="chip"><input type="checkbox" id="vegOnly"><span>🥬</span><span data-i18n="cat.veg">Vegetarisch</span></label>
+          <label class="chip"><input type="checkbox" id="meatOnly"><span>🍖</span><span data-i18n="cat.meat">Fleisch</span></label>
+          <label class="chip"><input type="checkbox" id="saucesOnly"><span>🥫</span><span data-i18n="cat.sauces">Saucen</span></label>
+          <label class="chip"><input type="checkbox" id="breadOnly"><span>🥖</span><span data-i18n="cat.bread">Brot hausgemacht</span></label>
+        </div>
+      </div>
+
+      <div class="section">
+        <h4 data-i18n="weekday.title">Wochentag</h4>
+        <div class="chip-row" id="dayChips">
+          <label class="chip"><input type="checkbox" class="dayFilter" value="mon"><span>📅</span><span data-i18n="weekday.mon">Montag</span></label>
+          <label class="chip"><input type="checkbox" class="dayFilter" value="tue"><span>📅</span><span data-i18n="weekday.tue">Dienstag</span></label>
+          <label class="chip"><input type="checkbox" class="dayFilter" value="wed"><span>📅</span><span data-i18n="weekday.wed">Mittwoch</span></label>
+          <label class="chip"><input type="checkbox" class="dayFilter" value="thu"><span>📅</span><span data-i18n="weekday.thu">Donnerstag</span></label>
+          <label class="chip"><input type="checkbox" class="dayFilter" value="fri"><span>📅</span><span data-i18n="weekday.fri">Freitag</span></label>
+          <label class="chip"><input type="checkbox" class="dayFilter" value="sat"><span>📅</span><span data-i18n="weekday.sat">Samstag</span></label>
+          <label class="chip"><input type="checkbox" class="dayFilter" value="sun"><span>📅</span><span data-i18n="weekday.sun">Sonntag</span></label>
+        </div>
+      </div>
+
+      <div class="section">
+        <h4 data-i18n="price.title">Max-Preis</h4>
+        <div class="pill-group">
+          <div class="pill">
+            <label for="priceKMax" style="font-weight:700" data-i18n="price.kebap">Kebap €</label>
+            <input id="priceKMax" class="slider" type="range" min="2" max="10" step="0.1">
+            <div class="value" id="priceKLabel">—</div>
+          </div>
+          <div class="pill">
+            <label for="priceDMax" style="font-weight:700" data-i18n="price.durum">Dürüm €</label>
+            <input id="priceDMax" class="slider" type="range" min="2" max="12" step="0.1">
+            <div class="value" id="priceDLabel">—</div>
+          </div>
+          <div class="pill">
+            <label for="priceBMax" style="font-weight:700" data-i18n="price.box">Kebab Box €</label>
+            <input id="priceBMax" class="slider" type="range" min="2" max="14" step="0.1">
+            <div class="value" id="priceBLabel">—</div>
+          </div>
+        </div>
+        <div class="subtle" style="margin-top:6px" id="priceHint">–</div>
+      </div>
+
+      <div class="modal-actions"><button id="applyBtn" data-i18n="modal.apply">Anwenden</button></div>
+    </div>
+  </div>
+
+  <!-- ===== Bottom Sheet (detail view) ===== -->
+  <div id="detailOverlay" aria-hidden="true">
+    <div id="detailSheet">
+      <div class="sheet-head">
+        <div style="flex:1">
+          <div class="sheet-title" id="dTitle">–</div>
+          <div class="sheet-sub" id="dAddr">–</div>
+        </div>
+        <button id="dClose" class="action-pill"><span class="action-icon">✖️</span><span>Close</span></button>
+      </div>
+      <div class="sheet-hero" id="dHero"></div>
+      <div class="actions-row">
+        <div class="action-card" id="dShare"><span>📤</span><small>Share</small></div>
+        <div class="action-card" id="dDir"><span>🧭</span><small>Directions</small></div>
+        <div class="action-card" id="dRate"><span>⭐</span><small>Rate</small></div>
+        <div class="action-card" id="dCopy"><span>🔗</span><small>Copy Link</small></div>
+      </div>
+      <div class="sheet-sec" id="dPrices"></div>
+      <div class="sheet-sec" id="dTags"></div>
+      <div class="sheet-sec" id="dDays"></div>
+      <div class="checkin-wrap"><button id="dCheckin" class="checkin-btn">➡️  Check-in</button></div>
+    </div>
+  </div>
+
+  <!-- Supabase & Leaflet -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+
+  <!-- ========= i18n ========= -->
+  <script>
+  const DICTS = {
+    de: {
+      nav:{filter:"Filter", add:"Shop hinzufügen", feedback:"Feedback", selection:"Preisliste", about:"Über mich"},
+      searchPH:"Suche nach Name, Straße, Tags … (z.B. falafel, scharf)",
+      modal:{title:"Filter", clear:"Löschen", apply:"Anwenden", subtitle:"Feinjustiere deine Suche nach Tag, Kategorie und Preis."},
+      rec:{title:"Für dich empfohlen"},
+      weekday:{title:"Wochentag", mon:"Montag", tue:"Dienstag", wed:"Mittwoch", thu:"Donnerstag", fri:"Freitag", sat:"Samstag", sun:"Sonntag"},
+      cat:{title:"Kategorie", veg:"Vegetarisch", meat:"Fleisch", sauces:"Saucen", bread:"Brot hausgemacht"},
+      price:{title:"Max-Preis", kebap:"Kebap €", durum:"Dürüm €", box:"Kebab Box €"},
+      popup:{tags:{veg:"Vegetarisch",meat:"Fleisch",sauces:"Saucen",bread:"Brot hausgemacht",cards:"Kartenzahlung"},
+       priceTitle:"Preise:",days:"Tage",kebap:"Kebap",durum:"Dürüm",box:"Kebab Box",noaddr:"Keine Adresse", rating:"Bewertung"},
+      daysMap:{mon:"Montag",tue:"Dienstag",wed:"Mittwoch",thu:"Donnerstag",fri:"Freitag",sat:"Samstag",sun:"Sonntag"},
+      sidebar:{title:"Preisliste", reset:"Reset", hide:"Schließen"},
+      sort:{none:"Keine Sortierung", kAsc:"Kebap ↑", kDesc:"Kebap ↓", dAsc:"Dürüm ↑", dDesc:"Dürüm ↓", bAsc:"Kebab Box ↑", bDesc:"Kebab Box ↓", rAsc:"Rating ↑", rDesc:"Rating ↓"},
+      empty:"Keine Treffer. Filter zurücksetzen?",
+      hints:{range:"Spanne: Kebap {kmin}–{kmax}, Dürüm {dmin}–{dmax}, Box {bmin}–{bmax}", matches:"Treffer: {n}"}
+    },
+    en: {
+      nav:{filter:"Filter", add:"Add Shop", feedback:"Feedback", selection:"Price list", about:"About me"},
+      searchPH:"Search by name, street, tags … (e.g., falafel, spicy)",
+      modal:{title:"Filter", clear:"Clear", apply:"Apply", subtitle:"Fine-tune your search by day, category and price."},
+      rec:{title:"Recommended for you"},
+      weekday:{title:"Weekday", mon:"Monday", tue:"Tuesday", wed:"Wednesday", thu:"Thursday", fri:"Friday", sat:"Saturday", sun:"Sunday"},
+      cat:{title:"Category", veg:"Vegetarian", meat:"Meat", sauces:"Sauces", bread:"Homemade bread"},
+      price:{title:"Max price", kebap:"Kebap €", durum:"Durum €", box:"Kebab Box €"},
+      popup:{tags:{veg:"Vegetarian",meat:"Meat",sauces:"Sauces",bread:"Homemade bread",cards:"Card payment"},
+       priceTitle:"Prices:",days:"Days",kebap:"Kebap",durum:"Durum",box:"Kebab Box",noaddr:"No address", rating:"Rating"},
+      daysMap:{mon:"Monday",tue:"Tuesday",wed:"Wednesday",thu:"Thursday",fri:"Friday",sat:"Saturday",sun:"Sunday"},
+      sidebar:{title:"Price list", reset:"Reset", hide:"Hide"},
+      sort:{none:"No sort", kAsc:"Kebap ↑", kDesc:"Kebap ↓", dAsc:"Durum ↑", dDesc:"Durum ↓", bAsc:"Kebab Box ↑", bDesc:"Kebab Box ↓", rAsc:"Rating ↑", rDesc:"Rating ↓"},
+      empty:"No results. Reset filters?",
+      hints:{range:"Range: Kebap {kmin}–{kmax}, Durum {dmin}–{dmax}, Box {bmin}–{bmax}", matches:"Matches: {n}"}
+    }
+  };
+  const I18N = (() => {
+    let lang='de', handlers=[];
+    const get=(o,p)=>p.split('.').reduce((a,k)=>a&&a[k]!=null?a[k]:undefined,o);
+    function t(k,fb){ const v=get(DICTS[lang],k); return v==null?(fb??k):v; }
+    function day(code){ return (DICTS[lang].daysMap||{})[String(code).toLowerCase()] || code; }
+    function applyTexts(){
+      document.querySelectorAll('.lang-toggle [data-lang]').forEach(b=>{
+        const on=b.dataset.lang===lang; b.classList.toggle('is-active',on); b.setAttribute('aria-pressed',on?'true':'false');
+      });
+      const setLabel=(id,key)=>{ const el=document.querySelector(`#${id} span:last-child`); if(el) el.textContent=t(key,el.textContent?.trim()); };
+      setLabel('filterBtn','nav.filter');
+      document.querySelectorAll('[data-i18n]').forEach(el=> el.textContent = t(el.dataset.i18n, el.textContent));
+      document.querySelectorAll('#sideSort option').forEach(opt=>{
+        const k=opt.getAttribute('data-i18n'); if(k) opt.textContent = t(k, opt.textContent);
+      });
+      const si=document.getElementById('searchInput'); if(si) si.placeholder=t('searchPH', si.placeholder);
+      document.getElementById('emptyText').textContent = t('empty', 'No results.');
+      document.documentElement.lang=lang;
+    }
+    function set(l){ lang=(l==='en')?'en':'de'; localStorage.setItem('lang',lang); applyTexts(); handlers.forEach(fn=>{ try{ fn(lang); }catch(_){ } }); }
+    function init(){
+      const stored=localStorage.getItem('lang'); const browser=(navigator.language||'').slice(0,2);
+      set(stored || (['de','en'].includes(browser)?browser:'de'));
+      document.addEventListener('click', e=>{
+        const btn=e.target.closest('.lang-toggle [data-lang]'); if(btn) set(btn.dataset.lang);
+      });
+    }
+    function onChange(fn){ handlers.push(fn); }
+    function fmt(s,obj){ return String(s||'').replace(/\{(\w+)\}/g,(_,k)=> (obj&&k in obj)?obj[k]:''); }
+    return { init, t, day, onChange, fmt };
+  })();
+  document.addEventListener('DOMContentLoaded', I18N.init);
+
+function togglePassword(inputId, btnId){
+  const input = document.getElementById(inputId);
+  const btn = document.getElementById(btnId);
+  if (input && btn){
+    btn.addEventListener('click', ()=>{
+      input.type = input.type === 'password' ? 'text' : 'password';
+    });
+  }
+}
+
+document.addEventListener('DOMContentLoaded', ()=>{
+  const pairs = [
+    ['authPassword',   'toggleLoginPassword'],
+    ['signupPassword', 'toggleSignupPassword'],
+    ['signupPassword2','toggleSignupPassword2']
+  ];
+  for (const [inputId, btnId] of pairs){
+    const input = document.getElementById(inputId);
+    const btn   = document.getElementById(btnId);
+    if (input && btn){
+      btn.type = 'button';
+      btn.addEventListener('click', (e)=>{
+        e.preventDefault();
+        input.type = input.type === 'password' ? 'text' : 'password';
+      });
+    }
+  }
+});
+
+
+  </script>
+
+  <!-- ========= Map, Cluster & UI Logic ========= -->
+  <script>
+  // === Auth + favorites state (FIXED) ===
+const SUPABASE_URL  = 'https://bcxeaxhhhvagpvomtsyi.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjeGVheGhoaHZhZ3B2b210c3lpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyNTUxMzcsImV4cCI6MjA3MDgzMTEzN30.HCnWgapZrDY4RIgdXM5eh2UkslFpSSuJwEUszZHtp0w';
+const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+let currentUser = null;
+let myFavs = new Set();
+
+async function setUser(user){
+  currentUser = user;
+  const btn = document.getElementById('loginBtn');
+  const txt = document.getElementById('loginText');
+
+  if (user) {
+    btn.title = 'Logout';
+    txt.textContent = 'Logout';
+    await loadFavorites();
+  } else {
+    btn.title = 'Login';
+    txt.textContent = 'Login';
+    myFavs.clear();
+  }
+
+  try { drawMarkers(); renderList(); } catch (_) {}
+}
+
+async function loadFavorites(){
+  if (!currentUser) { myFavs.clear(); return; }
+  const { data, error } = await supa
+    .from('favorites')
+    .select('shop_id')
+    .eq('user_id', currentUser.id);            // ✅ scope to current user
+  if (!error && Array.isArray(data)) {
+    myFavs = new Set(data.map(r => String(r.shop_id)));
+  }
+}
+
+async function toggleFavorite(shopId){
+  if (!currentUser) {
+    alert(document.documentElement.lang==='de'
+      ? 'Bitte einloggen, um Favoriten zu speichern.'
+      : 'Please log in to save favorites.');
+    return;
+  }
+  const id = String(shopId);
+  if (myFavs.has(id)) {
+    await supa.from('favorites')
+      .delete()
+      .eq('user_id', currentUser.id)
+      .eq('shop_id', id);
+    myFavs.delete(id);
+  } else {
+    await supa.from('favorites')
+      .insert([{ user_id: currentUser.id, shop_id: id }]);
+    myFavs.add(id);
+  }
+  try { drawMarkers(); renderList(); } catch (_) {}
+}
+
+function invalidateAfterFrame(delay=0){
+  if(!window.map) return;
+  requestAnimationFrame(()=> setTimeout(()=> window.map.invalidateSize(), delay));
+}
+window.addEventListener('resize', ()=> invalidateAfterFrame(50));
+window.addEventListener('orientationchange', ()=> invalidateAfterFrame(150));
+
+// ===== AUTH UI (Email + Password + GitHub) – FIXED =====
+// open/close login
+
+document.addEventListener('DOMContentLoaded', () => {
+  const loginBtn  = document.getElementById('loginBtn');
+  const loginText = document.getElementById('loginText');
+
+  const authOv    = document.getElementById('authOverlay');
+  const authClose = document.getElementById('authClose');
+  const authEmail = document.getElementById('authEmail');
+  const authPass  = document.getElementById('authPassword');
+  const authErr   = document.getElementById('authError');
+  const btnIn     = document.getElementById('authSignIn');
+  const btnUp     = document.getElementById('authSignUp');
+  const btnGH     = document.getElementById('authGitHub');
+
+  function openAuth(){
+    authErr.textContent = '';
+    authErr.style.color = '';
+    authEmail.value = '';
+    authPass.value = '';
+    authOv.style.display = 'flex';
+  }
+  function closeAuth(){ authOv.style.display = 'none'; }
+
+  loginBtn?.addEventListener('click', async () => {
+  const { data } = await supa.auth.getUser();
+  if (data?.user) {
+    // Logged in → go to profile page
+    window.location.href = 'profile.html';
+    return;
+  }
+  // Not logged in → open login modal
+  openAuth();
+});
+
+
+  authClose?.addEventListener('click', closeAuth);
+  authOv?.addEventListener('click', (e)=>{ if(e.target===authOv) closeAuth(); });
+
+  btnGH?.addEventListener('click', async ()=> {
+  const redirectTo = location.origin;
+  await supa.auth.signInWithOAuth({
+    provider: 'github',
+    options: { redirectTo, scopes: 'read:user user:email' }
+  });
+});
+
+
+  async function signInEmail(){
+    authErr.textContent = '';
+    const email = (authEmail.value||'').trim();
+    const password = authPass.value||'';
+    if (!email || !password) { authErr.textContent = 'Bitte E‑Mail und Passwort eingeben.'; return; }
+    const { data: signInData, error } = await supa.auth.signInWithPassword({ email, password });
+if (error) { authErr.textContent = error.message; return; }
+
+// Immediately reflect the new session in the UI
+const { data: { session } } = await supa.auth.getSession();
+await handleSession(session);
+
+// Stay on the map: just close the modal
+closeAuth();
+// optional: tiny toast
+try { showToast('✅ Eingeloggt'); } catch(_) {}
+
+
+  }
+
+  
+  btnIn?.addEventListener('click', signInEmail);
+  // === Toast helper (top-level in this block is OK) ===
+function showToast(msg, ms=4200){
+  const t = document.getElementById('donerdToast');
+  if(!t) return alert(msg);
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=> t.classList.remove('show'), ms);
+}
+
+// === Switch Login → Signup modal ===
+const signupOv    = document.getElementById('signupOverlay');
+const signupClose = document.getElementById('signupClose');
+const signupBtn   = document.getElementById('signupSubmit');
+
+document.getElementById('authSignUp')?.addEventListener('click', () => {
+  authOv.style.display = 'none';
+  signupOv.style.display = 'flex';
+});
+
+signupClose?.addEventListener('click', () => {
+  signupOv.style.display = 'none';
+});
+
+// Password eye toggles for signup (you already have togglePassword globally)
+togglePassword('signupPassword','toggleSignupPassword');
+togglePassword('signupPassword2','toggleSignupPassword2');
+
+// === Single SIGNUP flow ===
+async function doSignup(){
+  const email     = (document.getElementById('signupEmail').value||'').trim();
+  const password  = document.getElementById('signupPassword').value||'';
+  const password2 = document.getElementById('signupPassword2').value||'';
+  const first     = document.getElementById('signupName').value||'';
+  const last      = document.getElementById('signupSurname').value||'';
+  const age       = parseInt(document.getElementById('signupAge').value,10)||null;
+  const err       = document.getElementById('authErrorSignup');
+
+  err.style.color = '#ef4444'; // red by default
+  err.textContent = '';
+
+  if(!email || !password || !password2 || !first || !last || !age){
+    err.textContent = 'Alle Felder ausfüllen.';
+    return;
+  }
+  if(password !== password2){
+    err.textContent = 'Passwörter stimmen nicht überein.';
+    return;
+  }
+
+  const { data, error } = await supa.auth.signUp({
+    email, password,
+    options: { data: { first_name:first, last_name:last, age } }
+  });
+
+  if(error){
+    err.textContent = error.message;
+    return;
+  }
+
+  // NOTE: With email confirmation ON, there is usually no active session yet.
+  // Writing to your 'profiles' table from the client may fail due to RLS.
+  // Keep it simple: show confirm toast and close the signup modal.
+
+  err.style.color = '#16a34a';
+  err.textContent = 'Registriert. Bitte E‑Mail bestätigen.';
+  signupOv.style.display = 'none';
+  showToast('📨 Bitte bestätige deine E‑Mail. Danach kannst du dich einloggen.');
+}
+
+signupBtn?.addEventListener('click', doSignup);
+
+ });
+
+// Keep your existing session bootstrap but update setUser to show the name
+// ===== Session bootstrap (single) – FIXED =====
+async function handleSession(session){
+  const user = session?.user ?? null;
+
+  // Optional profile upsert (safe if table exists)
+  if (user) {
+    try {
+      const display =
+        user.user_metadata?.user_name ||
+        user.user_metadata?.full_name ||
+        (user.email ? user.email.split('@')[0] : 'User');
+      await supa.from('profiles').upsert(
+        { id: user.id, display_name: display },
+        { onConflict: 'id' }
+      );
+    } catch (e) { /* ignore */ }
+  }
+  await setUser(user);
+}
+
+(async () => {
+  const { data: { session } } = await supa.auth.getSession();
+  await handleSession(session);
+  supa.auth.onAuthStateChange(async (_event, session) => {
+  await handleSession(session);   // updates button + favorites immediately
+});
+})();
+
+
+// Your setUser gets a tiny enhancement to show the name
+async function setUser(user){
+  currentUser = user;
+  const btn = document.getElementById('loginBtn');
+  const txt = document.getElementById('loginText');
+
+  if (user) {
+    // Button behaves as "Profile" when logged in
+    btn.title = 'Profil';
+    const first = user.user_metadata?.first_name;
+    txt.textContent = first ? `Hi, ${first}` : 'Profil';
+    await loadFavorites();
+  } else {
+    // Button behaves as "Login" when logged out
+    btn.title = 'Login';
+    txt.textContent = 'Login';
+    myFavs.clear();
+  }
+
+  try { drawMarkers(); renderList(); } catch (_) {}
+}
+
+
+// Keep your existing boot:
+// (already present in your file)
+// (async () => {
+//   const { data: { session } } = await supa.auth.getSession();
+//   await handleSession(session);
+//   supa.auth.onAuthStateChange(async (_event, session) => {
+//     await handleSession(session);
+//   });
+// })();
+
+
+  // ----- FAVORITES helpers should send user_id -----
+  async function toggleFavorite(shopId){
+    if(!currentUser){
+      alert(document.documentElement.lang==='de'
+        ? 'Bitte einloggen, um Favoriten zu speichern.'
+        : 'Please log in to save favorites.');
+      return;
+    }
+    const id = String(shopId);
+    if(myFavs.has(id)){
+      await supa.from('favorites')
+        .delete()
+        .eq('user_id', currentUser.id)
+        .eq('shop_id', id);
+      myFavs.delete(id);
+    } else {
+      await supa.from('favorites')
+        .insert([{ user_id: currentUser.id, shop_id: id }]);
+      myFavs.add(id);
+    }
+    try{ drawMarkers(); renderList(); }catch(_){}
+  }
+
+  // ----- RATINGS: always send user_id too -----
+  // ===== Ratings – single implementation =====
+async function submitRating(shop, value, comment){
+  const { data } = await supa.auth.getUser();
+  const uid = data?.user?.id ?? null;
+  if (!uid) throw new Error('Login required to rate');
+
+  const payload = { shop_id: shop._id, rating: value, comment: comment || null, user_id: uid };
+  const { error } = await supa.from('shop_ratings').insert([payload]);
+  if (error) throw error;
+
+  // refresh aggregates
+  const { data: updated } = await supa
+    .from('shops').select('rating_avg,rating_count')
+    .eq('id', shop._id).single();
+
+  if (updated) {
+    shop.rating_avg   = typeof updated.rating_avg === 'number' ? updated.rating_avg : shop.rating_avg;
+    shop.rating_count = typeof updated.rating_count === 'number' ? updated.rating_count : shop.rating_count;
+    shop.rating = Number.isFinite(shop.rating_avg) ? shop.rating_avg : shop.rating_admin;
+  }
+}
+
+  const markerById = new Map();
+
+  // ====== loader with audience+admin ratings ======
+  async function loadShops(){
+    const num = v => (Number.isFinite(Number(v)) ? Number(v) : undefined);
+    const asArrayMaybe = v => Array.isArray(v) ? v : (typeof v==='string' ? v.split(',').map(s=>s.trim()).filter(Boolean) : []);
+  function normalize(rows){
+  return (rows||[]).map((r,i)=>{
+    const rating_admin = num(r.rating_admin);
+    const rating_avg   = num(r.rating_avg);
+    const rating_count = Number(r.rating_count || 0);
+    const rating_effective = Number.isFinite(r.rating_avg) ? r.rating_avg :
+                             (Number.isFinite(rating_admin) ? rating_admin : undefined);
+    return {
+      _id: r.id ?? r._id ?? r.slug ?? String(i),
+      name: r.name ?? '',
+      address: r.address ?? '',
+      lat: num(r.lat ?? r.latitude),
+      lng: num(r.lng ?? r.longitude),
+      vegetarian: !!(r.vegetarian),          // ✅ correct boolean from Supabase
+      meat: !!(r.meat),
+      sauces: !!(r.sauces),
+      homemade_bread: !!(r.homemade_bread ?? r.bread),
+      card: !!(r.payment_cards),             // ✅ NEW: map Supabase payment_cards → card
+      prices: {
+        kebap: num(r.price_kebap ?? r.kebap_price ?? r.price_kebab ?? r.kebab_price),
+        durum: num(r.price_durum ?? r.durum_price),
+        box:   num(r.price_box   ?? r.box_price)
+      },
+      opening_days: asArrayMaybe(r.opening_days),
+      rating: rating_effective,
+      rating_admin, rating_avg, rating_count,
+      image_urls: Array.isArray(r.image_urls) ? r.image_urls : (r.image_urls ? [r.image_urls] : [])
+    };
+  }).filter(s => Number.isFinite(s.lat) && Number.isFinite(s.lng));
+}
+    try{
+      const { data, error } = await supa.from('shops')
+  .select('id,name,address,lat,lng,vegetarian,meat,sauces,homemade_bread,payment_cards,price_kebap,price_durum,price_box,opening_days,image_urls,rating_admin,rating_avg,rating_count');
+      if(error) throw error;
+      const mapped = normalize(data);
+      if (mapped.length) { shops = mapped; return; }
+      const d = await fetch('shops.json').then(r=>r.json());
+      shops = normalize(d);
+    }catch(e){
+      console.warn('Supabase failed, using shops.json fallback:', e);
+      try{ const d = await fetch('shops.json').then(r=>r.json()); shops = normalize(d); }catch(_){ shops = []; }
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    // ==== THEME ====
+    const themeBtn = document.getElementById('themeBtn');
+    const themeIcon = document.getElementById('themeIcon');
+    const themeText = document.getElementById('themeText');
+    function applyTheme(mode){
+      document.documentElement.setAttribute('data-theme', mode);
+      localStorage.setItem('theme', mode);
+      themeIcon.textContent = mode==='dark' ? '🌞' : '🌙';
+      themeText.textContent = mode==='dark' ? 'Light' : 'Dark';
+      if(window._lightTiles && window._darkTiles){
+        if(mode==='dark'){ map.removeLayer(_lightTiles); _darkTiles.addTo(map); }
+        else { map.removeLayer(_darkTiles); _lightTiles.addTo(map); }
+      }
+      invalidateAfterFrame(50);
+    }
+    const prefDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    applyTheme(localStorage.getItem('theme') || (prefDark?'dark':'light'));
+    themeBtn.addEventListener('click', ()=> applyTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark'));
+
+    // Filter Modal refs
+    const modal=document.getElementById('modalOverlay');
+    const applyBtn=document.getElementById('applyBtn');
+    const resetBtn=document.getElementById('resetBtn');
+    document.getElementById('filterBtn').addEventListener('click', ()=>{
+  modal.style.display='flex';
+  invalidateAfterFrame(50);
+  // Toggle mobile menu
+document.getElementById('mobileMenuBtn')?.addEventListener('click', ()=>{
+  document.getElementById('mobileMenu').classList.toggle('hidden');
+});
+});
+
+    applyBtn.addEventListener('click', ()=>{
+  modal.style.display='none';
+  drawMarkers(); renderList();
+  invalidateAfterFrame(50);
+});
+
+    resetBtn.addEventListener('click', ()=>{ resetAll(); });
+
+    // Inputs & chips
+    const vegChk=document.getElementById('vegOnly');
+    const meatChk=document.getElementById('meatOnly');
+    const saucesChk=document.getElementById('saucesOnly');
+    const breadChk=document.getElementById('breadOnly');
+    const pKmax=document.getElementById('priceKMax');
+    const pDmax=document.getElementById('priceDMax');
+    const pBmax=document.getElementById('priceBMax');
+    const lK=document.getElementById('priceKLabel');
+    const lD=document.getElementById('priceDLabel');
+    const lB=document.getElementById('priceBLabel');
+    const priceHint=document.getElementById('priceHint');
+    const matchHint=document.getElementById('matchHint');
+    const dayChks=[...document.querySelectorAll('.dayFilter')];
+
+    function updateChipStyles(){
+      document.querySelectorAll('.chip').forEach(lb=>{
+        const i=lb.querySelector('input'); if(!i) return;
+        lb.classList.toggle('active', i.checked);
+      });
+    }
+    document.querySelectorAll('.chip input').forEach(i=>i.addEventListener('change',()=>{updateChipStyles(); updateFilterHUD();}));
+
+    // Search
+    const searchInput=document.getElementById('searchInput');
+    let currentQuery='';
+    const setQuery=q=> currentQuery=(q||'').trim().toLowerCase();
+    searchInput.addEventListener('input',e=>{ setQuery(e.target.value); drawMarkers(); renderList(); });
+    searchInput.addEventListener('keydown',e=>{ if(e.key==='Enter'){ setQuery(e.target.value); drawMarkers(); renderList(); } });
+
+    // ===== Map + clusters
+    map=L.map('map').setView([52.502,13.402],13);
+    window._map = map;
+    const _lightTiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors' });
+    const _darkTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; OpenStreetMap contributors &copy; CARTO' });
+    window._lightTiles = _lightTiles; window._darkTiles = _darkTiles;
+    (document.documentElement.getAttribute('data-theme')==='dark'?_darkTiles:_lightTiles).addTo(map);
+
+    clusters=L.markerClusterGroup({
+      spiderfyOnMaxZoom:true, showCoverageOnHover:false, maxClusterRadius:50,
+      iconCreateFunction:cluster=>{
+        const count=cluster.getChildCount();
+        return L.divIcon({
+          html:`<div class="cluster-icon"><div class="pin"></div><div class="badge">${count}</div></div>`,
+          className:'cluster-wrapper', iconSize:[34,44], iconAnchor:[17,44]
+        });
+      }
+    }).addTo(map);
+
+    // Geolocation
+    document.getElementById('locateBtn').addEventListener('click',()=> map.locate({setView:true,maxZoom:16}));
+    map.on('locationerror',()=>alert(document.documentElement.lang==='de'?'Position konnte nicht ermittelt werden.':'Could not get your location.'));
+
+    // ======== Load shops ========
+    await loadShops();
+
+    // ===== Helpers for filter HUD =====
+    function euro(x){
+      if(x==null || !isFinite(x)) return '—';
+      const lang=document.documentElement.lang || 'de';
+      try{ return new Intl.NumberFormat(lang,{style:'currency',currency:'EUR'}).format(x); }
+      catch(_){ return '€ ' + Number(x).toFixed(2); }
+    }
+    const fmtRating = r => (typeof r==='number' && isFinite(r)) ? r.toFixed(1) : '—';
+
+    // Pre-compute slider ranges from loaded data
+    (function initSliderRanges(){
+      const nums = a=>a.filter(v=>v!=null && isFinite(v)).map(Number);
+      const k = nums(shops.map(s=>s?.prices?.kebap));
+      const d = nums(shops.map(s=>s?.prices?.durum));
+      const b = nums(shops.map(s=>s?.prices?.box));
+      const kMin = Math.min(...k,3), kMax = Math.max(...k,10);
+      const dMin = Math.min(...d,3.5), dMax = Math.max(...d,12);
+      const bMin = Math.min(...b,4), bMax = Math.max(...b,14);
+      pKmax.min=kMin.toFixed(1); pKmax.max=kMax.toFixed(1); pKmax.value=pKmax.max;
+      pDmax.min=dMin.toFixed(1); pDmax.max=dMax.toFixed(1); pDmax.value=pDmax.max;
+      pBmax.min=bMin.toFixed(1); pBmax.max=bMax.toFixed(1); pBmax.value=pBmax.max;
+      priceHint.textContent = I18N.fmt(I18N.t('hints.range'),{
+        kmin:euro(kMin),kmax:euro(kMax),dmin:euro(dMin),dmax:euro(dMax),bmin:euro(bMin),bmax:euro(bMax)
+      });
+      updateFilterHUD();
+    })();
+
+    function uiFilters(){
+      const selDays = dayChks.filter(cb=>cb.checked).map(cb=>cb.value);
+      return { selDays };
+    }
+
+    function countMatches(){
+      let n=0;
+      (shops||[]).forEach(s=>{ if(passesFilters(s)) n++; });
+      return n;
+    }
+
+    function updateFilterHUD(){
+      lK.textContent = (+pKmax.value >= +pKmax.max-1e-9) ? '—' : euro(+pKmax.value);
+      lD.textContent = (+pDmax.value >= +pDmax.max-1e-9) ? '—' : euro(+pDmax.value);
+      lB.textContent = (+pBmax.value >= +pBmax.max-1e-9) ? '—' : euro(+pBmax.value);
+      const n = countMatches();
+      matchHint.textContent = I18N.fmt(I18N.t('hints.matches'), {n});
+    }
+
+    [pKmax,pDmax,pBmax].forEach(sl=> sl.addEventListener('input', updateFilterHUD));
+    dayChks.forEach(cb=> cb.addEventListener('change', updateFilterHUD));
+    I18N.onChange(()=>{ priceHint && updateFilterHUD(); });
+
+    // ===== Compact popup content (click anywhere to open detail) =====
+    function getPopupContent(s){
+  const P = s?.prices || {};
+  const img = (s.image_urls && s.image_urls.length)
+    ? s.image_urls[0]
+    : `https://picsum.photos/seed/${encodeURIComponent(s.name||s._id)}/400/300`;
+
+  const ratingVal = Number.isFinite(s.rating_avg) ? s.rating_avg
+                  : (Number.isFinite(s.rating_admin) ? s.rating_admin : null);
+  const ratingCnt = Number.isFinite(s.rating_count) ? s.rating_count : null;
+  const ratingHtml =
+    `<span class="pop-rating">★ ${ratingVal!=null ? ratingVal.toFixed(1) : "—"}${ratingCnt!=null ? ` (${ratingCnt})` : ""}</span>`;
+
+  const veg  = s.vegetarian ? `<span class="pop-tag">🥬 ${I18N.t('popup.tags.veg')}</span>` : '';
+  const card = s.card       ? `<span class="pop-tag">💳 ${I18N.t('popup.tags.cards')}</span>` : '';
+
+  const favOn = myFavs.has(String(s._id)) ? ' is-on' : '';
+  const moreTxt = (document.documentElement.lang === 'de') ? 'Mehr' : 'More';
+
+  return `
+    <div class="pop-card" data-id="${s._id}">
+      <div class="pop-media">
+        <img src="${img}" alt="">
+      </div>
+
+      <div class="pop-body">
+        <div class="pop-head">
+          <div class="pop-title">${s.name || '—'}</div>
+          ${ratingHtml}
+          <button class="fav-btn${favOn}" data-fav="${s._id}" aria-label="Save">❤</button>
+        </div>
+
+        <div class="pop-prices">
+          <div class="pop-pill">🥙 ${euro(P.kebap)}</div>
+          <div class="pop-pill">🌯 ${euro(P.durum)}</div>
+          <div class="pop-pill">📦 ${euro(P.box)}</div>
+        </div>
+
+        <div class="pop-tags">${veg}${card}</div>
+
+        <div class="pop-footer">
+          <button class="pop-more" data-id="${s._id}">${moreTxt}</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+    // Click anywhere on popup to open detail
+    map.on('popupopen', e=>{
+  const root = e.popup._contentNode?.querySelector('.pop-card');
+  if(!root) return;
+
+  // Only the “More” button opens the big sheet
+  const moreBtn = e.popup._contentNode?.querySelector('.pop-more');
+  if (moreBtn) {
+    moreBtn.addEventListener('click', (ev)=>{
+      ev.stopPropagation();
+      const id = moreBtn.getAttribute('data-id');
+      const s = shops.find(x=>String(x._id)===String(id));
+      if(s) openDetail(s);
+    });
+  }
+
+  // Heart button: toggle favorite, don’t open details
+  const favBtn = e.popup._contentNode?.querySelector('.fav-btn');
+  if (favBtn) {
+    const id = favBtn.getAttribute('data-fav');
+    if (myFavs.has(String(id))) favBtn.classList.add('is-on');
+    favBtn.addEventListener('click', (ev)=>{
+      ev.stopPropagation();
+      toggleFavorite(id);
+      favBtn.classList.toggle('is-on', myFavs.has(String(id)));
+    });
+  }
+});
+
+    // ===== Filters =====
+    function passesFilters(s){
+      if(currentQuery){
+        const hay=[s.name||'', s.address||'', ...(s.opening_days||[])].join(' ').toLowerCase();
+        if(!hay.includes(currentQuery)) return false;
+      }
+      if(vegChk?.checked && !s.vegetarian) return false;
+      if(meatChk?.checked && !s.meat) return false;
+      if(saucesChk?.checked && !s.sauces) return false;
+      if(breadChk?.checked && !s.homemade_bread) return false;
+      if(pKmax?.value && s.prices.kebap > parseFloat(pKmax.value)) return false;
+      if(pDmax?.value && s.prices.durum > parseFloat(pDmax.value)) return false;
+      if(pBmax?.value && s.prices.box   > parseFloat(pBmax.value)) return false;
+      const selDays = dayChks.filter(cb=>cb.checked).map(cb=>cb.value);
+      if(selDays.length && (!s.opening_days || !selDays.every(d=>s.opening_days.includes(d)))) return false;
+      const rminEl = document.getElementById('sRmin');
+      if(rminEl && rminEl.value){
+        const min = parseFloat(rminEl.value);
+        const eff = Number.isFinite(s.rating_avg) ? s.rating_avg :
+                    (Number.isFinite(s.rating_admin) ? s.rating_admin : -Infinity);
+        if(!isFinite(eff) || eff < min) return false;
+      }
+      return true;
+    }
+
+    // ===== Draw markers =====
+    const empty = document.getElementById('emptyOverlay');
+    function drawMarkers(){
+      clusters.clearLayers(); markerById.clear();
+      let any=false;
+      (shops||[]).forEach(s=>{
+        if(!passesFilters(s)) return;
+        const m=L.marker([s.lat,s.lng]);
+        m.bindPopup(getPopupContent(s), { maxWidth: 360, className: 'donerd-popup' });
+        clusters.addLayer(m); markerById.set(s._id, m); any=true;
+      });
+      if(any){ empty.classList.add('hidden'); try{ map.fitBounds(clusters.getBounds(),{padding:[40,40]}); }catch(_){ } }
+      else { empty.classList.remove('hidden'); }
+    }
+
+    // ===== Sidebar =====
+    // ===== Sidebar (clean top bar + thumbnails) =====
+const sideList = document.getElementById('sideList');
+const sideHide = document.getElementById('sideHide');
+const sideTab  = document.getElementById('sideTab');
+const openFiltersBtn = document.getElementById('openFilters');
+const sideMatchCount = document.getElementById('sideMatchCount');
+
+sideHide.addEventListener('click', ()=>{
+  document.body.classList.add('side-collapsed');
+  invalidateAfterFrame(200);
+});
+
+sideTab.addEventListener('click', ()=>{
+  document.body.classList.remove('side-collapsed');
+  invalidateAfterFrame(200);
+});
+
+openFiltersBtn?.addEventListener('click', ()=> { document.getElementById('modalOverlay').style.display='flex'; });
+
+function renderList(){
+  const arr = (shops||[]).filter(passesFilters);
+
+  // update compact counter
+  if (sideMatchCount) {
+    sideMatchCount.textContent = I18N.fmt(I18N.t('hints.matches'), { n: arr.length });
+  }
+
+  sideList.innerHTML = arr.map(s=>{
+    const P=s.prices||{};
+    const img = (s.image_urls && s.image_urls.length)
+      ? s.image_urls[0]
+      : `https://picsum.photos/seed/${encodeURIComponent(s.name||s._id)}/300/300`;
+
+    const userPill  = Number.isFinite(s.rating_avg)
+      ? `<span class="rating-pill rating-user"><span class="star star-user">★</span> ${fmtRating(s.rating_avg)}${s.rating_count?` (${s.rating_count})`:''}</span>` : '';
+    const adminPill = Number.isFinite(s.rating_admin)
+      ? `<span class="rating-pill rating-admin"><span class="star star-admin">★</span> ${fmtRating(s.rating_admin)}</span>` : '';
+
+    // ONLY vegetarian and cards here:
+    const meta = [
+      s.vegetarian ? `<span class="meta-pill">🥬 ${I18N.t('popup.tags.veg')}</span>` : '',
+      s.card       ? `<span class="meta-pill">💳 ${I18N.t('popup.tags.cards')}</span>` : ''
+    ].filter(Boolean).join('');
+
+    const favOn = myFavs.has(String(s._id)) ? ' is-on' : '';
+
+    return `
+      <div class="side-item" data-id="${s._id}" role="listitem">
+        <img class="side-thumb" src="${img}" alt="">
+        <div class="side-main">
+          <div class="side-name">${s.name||'—'}</div>
+          <div class="side-addr">${s.address||''}</div>
+
+          <div class="side-ratings">
+            ${userPill}${adminPill}
+          </div>
+
+          <div class="side-prices">
+            <span class="price-pill">🥙 ${euro(P.kebap)}</span>
+            <span class="price-pill">🌯 ${euro(P.durum)}</span>
+            <span class="price-pill">📦 ${euro(P.box)}</span>
+          </div>
+
+          <div class="side-meta">
+            ${meta}
+          </div>
+
+          <div style="display:flex; gap:8px; align-items:center;">
+            <button class="side-cta" data-id="${s._id}">Show</button>
+            <button class="fav-btn${favOn}" data-fav="${s._id}" aria-label="Save">❤</button>
+          </div>
+        </div>
+      </div>`;
+  }).join('') || `<div class="side-item" style="opacity:.7">${I18N.t('empty','No results.')}</div>`;
+
+  // navigate to marker on click
+  sideList.querySelectorAll('.side-item, .side-cta').forEach(el=>{
+    el.addEventListener('click', (e)=>{
+      const id = el.getAttribute('data-id') || el.dataset.id;
+      const s = (shops||[]).find(x=>String(x._id)===String(id));
+      if(!s) return;
+      document.body.classList.add('side-collapsed');
+      map.setView([s.lat,s.lng], 17);
+      const m = markerById.get(s._id); if(m) m.openPopup();
+    });
+  });
+
+  // wire hearts
+  sideList.querySelectorAll('.fav-btn').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const id = btn.getAttribute('data-fav');
+      toggleFavorite(id);
+      btn.classList.toggle('is-on', myFavs.has(String(id)));
+    });
+  });
+}
+
+    // ===== Detail sheet logic =====
+    const dOv = document.getElementById('detailOverlay');
+    const dTitle = document.getElementById('dTitle');
+    const dAddr  = document.getElementById('dAddr');
+    const dHero  = document.getElementById('dHero');
+    const dPrices= document.getElementById('dPrices');
+    const dTags  = document.getElementById('dTags');
+    const dDays  = document.getElementById('dDays');
+    const dClose = document.getElementById('dClose');
+    const dCheck = document.getElementById('dCheckin');
+
+    // === Rating modal (jetzt innerhalb von DOMContentLoaded!) ===
+let _rateShop = null, _rateValue = 0;
+
+const rateOv     = document.getElementById('rateOverlay');
+const rateTitle  = document.getElementById('rateTitle');
+const rateStars  = document.getElementById('rateStars');
+const rateText   = document.getElementById('rateComment');
+const rateSubmit = document.getElementById('rateSubmit');
+const rateCancel = document.getElementById('rateCancel');
+const rateClose  = document.getElementById('rateClose');
+
+function setStarUI(v){
+  _rateValue = v;
+  rateStars.querySelectorAll('.star-btn').forEach(btn=>{
+    const n = Number(btn.dataset.val);
+    btn.classList.toggle('on', n <= v);
+  });
+  rateSubmit.disabled = !(v >= 1 && v <= 5);
+}
+
+function openRateModal(shop){
+  _rateShop = shop;
+  setStarUI(0);
+  rateText.value = '';
+  rateTitle.textContent =
+    (document.documentElement.lang === 'de' ? 'Bewerten' : 'Rate') +
+    ' — ' + (shop.name || 'Shop');
+  rateOv.classList.add('open');
+  rateOv.setAttribute('aria-hidden','false');
+}
+
+function closeRateModal(){
+  rateOv.classList.remove('open');
+  rateOv.setAttribute('aria-hidden','true');
+}
+
+rateStars.addEventListener('click', (e)=>{
+  const b = e.target.closest('.star-btn');
+  if (b) setStarUI(Number(b.dataset.val));
+});
+
+rateSubmit.addEventListener('click', async ()=>{
+  if(!_rateShop || _rateValue < 1) return;
+  try{
+    await submitRating(_rateShop, _rateValue, rateText.value.trim());
+    closeRateModal();
+    alert(document.documentElement.lang==='de' ? 'Danke für deine Bewertung!' : 'Thanks for your rating!');
+    drawMarkers(); renderList(); openDetail(_rateShop);
+  }catch(err){
+    console.error('rating failed:', err);
+    alert(document.documentElement.lang==='de' ? 'Bewertung konnte nicht gesendet werden.' : 'Could not send rating.');
+  }
+});
+rateCancel.addEventListener('click', closeRateModal);
+rateClose .addEventListener('click', closeRateModal);
+rateOv.addEventListener('click', (e)=>{ if(e.target===rateOv) closeRateModal(); });
+
+    function closeDetail(){ dOv.classList.remove('open'); dOv.setAttribute('aria-hidden','true'); }
+    dClose.addEventListener('click', closeDetail);
+    dOv.addEventListener('click', (e)=>{ if(e.target===dOv) closeDetail(); });
+
+    function openDetail(s){
+      dTitle.textContent = s.name || '—';
+      dAddr.textContent  = s.address || I18N.t('popup.noaddr');
+      dHero.innerHTML = (s.image_urls && s.image_urls.length)
+        ? s.image_urls.map(u=>`<img src="${u}" alt="">`).join('')
+        : `<img src="https://picsum.photos/seed/${encodeURIComponent(s.name||s._id)}/600/220" alt="">`;
+
+      const P=s.prices||{};
+      const userPill  = Number.isFinite(s.rating_avg)
+        ? `<span class="rating-pill rating-user"><span class="star star-user">★</span> ${fmtRating(s.rating_avg)}${s.rating_count?` (${s.rating_count})`:''}</span>` : '';
+      const adminPill = Number.isFinite(s.rating_admin)
+        ? `<span class="rating-pill rating-admin"><span class="star star-admin">★</span> ${fmtRating(s.rating_admin)}</span>` : '';
+
+      dPrices.innerHTML = `
+        <div class="price-row">
+          ${userPill}${adminPill}
+          <div class="price-pill">🥙 ${I18N.t('popup.kebap')} ${euro(P.kebap)}</div>
+          <div class="price-pill">🌯 ${I18N.t('popup.durum')} ${euro(P.durum)}</div>
+          <div class="price-pill">📦 ${I18N.t('popup.box')} ${euro(P.box)}</div>
+        </div>`;
+
+      const tags=[];
+if(s.vegetarian)     tags.push(`<span class="tag-pill"><span class="icon-bubble">🥬</span>${I18N.t('popup.tags.veg')}</span>`);
+if(s.meat)           tags.push(`<span class="tag-pill"><span class="icon-bubble">🍖</span>${I18N.t('popup.tags.meat')}</span>`);
+if(s.sauces)         tags.push(`<span class="tag-pill"><span class="icon-bubble">🥫</span>${I18N.t('popup.tags.sauces')}</span>`);
+if(s.homemade_bread) tags.push(`<span class="tag-pill"><span class="icon-bubble">🥖</span>${I18N.t('popup.tags.bread')}</span>`);
+if(s.card)           tags.push(`<span class="tag-pill"><span class="icon-bubble">💳</span>${I18N.t('popup.tags.cards')}</span>`);
+      dTags.innerHTML = tags.length ? `<div class="shop-tags">${tags.join('')}</div>` : '';
+
+      dDays.innerHTML = (Array.isArray(s.opening_days) && s.opening_days.length)
+        ? `<div class="days-row">${s.opening_days.map(code=>`<span class="day-pill"><span class="icon-bubble">📅</span>${I18N.day(code)}</span>`).join('')}</div>`
+        : '';
+
+      document.getElementById('dDir').onclick = ()=> window.open(`https://www.google.com/maps?q=${s.lat},${s.lng}`, '_blank','noopener');
+      document.getElementById('dShare').onclick = async ()=>{
+        const url=`https://maps.google.com/?q=${s.lat},${s.lng}`;
+        if(navigator.share){ try{ await navigator.share({title:s.name,url}); }catch(_){ } }
+        else { await navigator.clipboard.writeText(url); alert('Link copied!'); }
+      };
+      document.getElementById('dCopy').onclick = async ()=>{ await navigator.clipboard.writeText(`https://maps.google.com/?q=${s.lat},${s.lng}`); alert('Link copied!'); };
+
+      document.getElementById('dRate').onclick = ()=> openRateModal(s);
+
+      const ci = JSON.parse(localStorage.getItem('checkins')||'{}');
+      const isChecked = !!ci[s._id];
+      dCheck.classList.toggle('done', isChecked);
+      dCheck.textContent = isChecked ? '✅  Checked-in' : '➡️  Check-in';
+      dCheck.onclick = ()=>{
+        const cur = JSON.parse(localStorage.getItem('checkins')||'{}');
+        cur[s._id]=!cur[s._id]; localStorage.setItem('checkins', JSON.stringify(cur));
+        dCheck.classList.toggle('done', !!cur[s._id]);
+        dCheck.textContent = cur[s._id] ? '✅  Checked-in' : '➡️  Check-in';
+      };
+
+      dOv.classList.add('open'); dOv.setAttribute('aria-hidden','false');
+      invalidateAfterFrame(150);
+
+    }
+
+    // Send rating + refresh aggregates from Supabase
+    async function submitRating(shop, value, comment){
+      let userId=null; try{ const { data } = await supa.auth.getUser(); userId = data?.user?.id ?? null; }catch(_){}
+      const payload = { shop_id: shop._id, rating: value, comment: comment || null, user_id: userId };
+      const { error } = await supa.from('shop_ratings').insert([payload]);
+      if(error) throw error;
+
+      const { data: updated, error: e2 } = await supa
+        .from('shops').select('rating_avg,rating_count').eq('id', shop._id).single();
+      if(!e2 && updated){
+        shop.rating_avg   = typeof updated.rating_avg === 'number' ? updated.rating_avg : shop.rating_avg;
+        shop.rating_count = typeof updated.rating_count === 'number' ? updated.rating_count : shop.rating_count;
+        shop.rating = Number.isFinite(shop.rating_avg) ? shop.rating_avg : shop.rating_admin;
+      }
+    }
+
+    // ===== Reset helpers =====
+    function resetAll(){
+      [vegChk,meatChk,saucesChk,breadChk].forEach(cb=>cb.checked=false);
+      dayChks.forEach(cb=>cb.checked=false);
+      const sideInputs=[document.getElementById('sKmax'),document.getElementById('sDmax'),document.getElementById('sBmax'),document.getElementById('sRmin')];
+      sideInputs.forEach(inp=>{ if(inp) inp.value=''; });
+      [pKmax,pDmax,pBmax].forEach(inp=>{ inp.value=inp.max; });
+      searchInput.value=''; setQuery(''); updateChipStyles(); updateFilterHUD(); drawMarkers(); renderList();
+      modal.style.display='none';
+    }
+    document.getElementById('emptyReset')?.addEventListener('click', resetAll);
+
+    // Initial draw
+    updateChipStyles();
+    drawMarkers();
+    renderList();
+
+    // Redraw on language change
+    I18N.onChange(()=>{ map.closePopup(); updateFilterHUD(); drawMarkers(); renderList(); });
+
+    invalidateAfterFrame(150);
+
+  });
+  </script>
+  <!-- Rating Modal -->
+<div id="rateOverlay" aria-hidden="true">
+  <div id="rateModal" role="dialog" aria-modal="true" aria-labelledby="rateTitle">
+    <div class="rate-head">
+      <div id="rateTitle" class="rate-title">Rate</div>
+      <button id="rateClose" class="rate-btn rate-cancel">✖</button>
+    </div>
+
+    <div class="rate-stars" id="rateStars">
+      <button class="star-btn" data-val="1">★</button>
+      <button class="star-btn" data-val="2">★</button>
+      <button class="star-btn" data-val="3">★</button>
+      <button class="star-btn" data-val="4">★</button>
+      <button class="star-btn" data-val="5">★</button>
+    </div>
+
+    <textarea id="rateComment" placeholder="Optional comment…"></textarea>
+
+    <div class="rate-actions">
+      <button id="rateCancel" class="rate-btn rate-cancel">Cancel</button>
+      <button id="rateSubmit" class="rate-btn rate-submit" disabled>Submit</button>
+    </div>
+  </div>
+</div>
+<!-- Auth Modal (LOGIN ONLY) -->
+<div id="authOverlay" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:1300">
+  <div id="authModal" role="dialog" aria-modal="true" aria-labelledby="authTitle"
+       style="width:min(420px,92vw);background:var(--card);color:var(--text);border:1px solid var(--ring);
+              border-radius:14px;box-shadow:0 12px 30px rgba(0,0,0,.35);padding:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
+      <div id="authTitle" style="font-weight:900;font-size:18px">Anmelden</div>
+      <button id="authClose" class="rate-btn rate-cancel">✖</button>
+    </div>
+
+    <div style="display:grid;gap:10px">
+      <input id="authEmail" type="email" placeholder="E‑Mail" autocomplete="email" class="donerd-input" />
+
+      <div style="position:relative">
+        <input id="authPassword" type="password" placeholder="Passwort" class="donerd-input" />
+        <button id="toggleLoginPassword" type="button"
+                style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none">👁</button>
+      </div>
+
+      <div id="authError" style="min-height:18px;color:#ef4444;font-weight:700;font-size:12px"></div>
+
+      <div style="display:flex;gap:8px">
+        <button id="authSignIn" class="rate-btn rate-submit" style="flex:1">Einloggen</button>
+        <button id="authSignUp" class="rate-btn" style="flex:1;background:#e5e7eb;color:#111">Konto erstellen</button>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:10px;margin:6px 0">
+        <div style="height:1px;background:var(--ring);flex:1"></div>
+        <small style="opacity:.8;font-weight:800">oder</small>
+        <div style="height:1px;background:var(--ring);flex:1"></div>
+      </div>
+
+      <button id="authGitHub" class="rate-btn" style="width:100%;background:#111;color:#fff">
+        Mit GitHub fortfahren
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Signup Modal -->
+<div id="signupOverlay" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:1300">
+  <div id="signupModal" role="dialog" aria-modal="true" aria-labelledby="signupTitle"
+       style="width:min(420px,92vw);background:var(--card);color:var(--text);border:1px solid var(--ring);
+              border-radius:14px;box-shadow:0 12px 30px rgba(0,0,0,.35);padding:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
+      <div id="signupTitle" style="font-weight:900;font-size:18px">Konto erstellen</div>
+      <button id="signupClose" class="rate-btn rate-cancel">✖</button>
+    </div>
+
+    <div style="display:grid;gap:10px">
+      <input id="signupName"     type="text"     placeholder="Vorname"               class="donerd-input" />
+      <input id="signupSurname"  type="text"     placeholder="Nachname"              class="donerd-input" />
+      <input id="signupAge"      type="number"   placeholder="Alter"                 class="donerd-input" />
+      <input id="signupEmail"    type="email"    placeholder="E‑Mail"                class="donerd-input" />
+
+      <div style="position:relative">
+        <input id="signupPassword"  type="password" placeholder="Passwort"            class="donerd-input" />
+        <button id="toggleSignupPassword" type="button"
+                style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none">👁</button>
+      </div>
+
+      <div style="position:relative">
+        <input id="signupPassword2" type="password" placeholder="Passwort wiederholen" class="donerd-input" />
+        <button id="toggleSignupPassword2" type="button"
+                style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none">👁</button>
+      </div>
+
+      <div id="authErrorSignup" style="min-height:18px;color:#ef4444;font-weight:700;font-size:12px"></div>
+
+      <button id="signupSubmit" class="rate-btn rate-submit" style="width:100%">Konto erstellen</button>
+    </div>
+  </div>
+</div>
+<!-- ===== Bottom Nav (mobile) ===== -->
+<div id="bottomNav" aria-label="App navigation" role="group">
+  <button id="navList"><span>📋</span><small>Liste</small></button>
+  <button id="navFilter"><span>⚙️</span><small>Filter</small></button>
+  <button id="navProfile"><span>👤</span><small>Profil</small></button>
+</div>
+
+<!-- Tiny toast -->
+ <script id="mobile-glue">
+document.addEventListener('DOMContentLoaded', () => {
+  // Ensure collapsed on small screens
+  if (window.matchMedia('(max-width: 600px)').matches) {
+    document.body.classList.add('side-collapsed');
+  }
+
+  const navList    = document.getElementById('navList');
+  const navFilter  = document.getElementById('navFilter');
+  const navProfile = document.getElementById('navProfile');
+
+  navList?.addEventListener('click', () => {
+    document.body.classList.toggle('side-collapsed');
+    requestAnimationFrame(()=> setTimeout(()=> window.map && window.map.invalidateSize(), 220));
+  });
+
+  navFilter?.addEventListener('click', () => {
+    const ov = document.getElementById('modalOverlay');
+    if (ov) ov.style.display = 'flex';
+  });
+
+  navProfile?.addEventListener('click', async () => {
+    try{
+      const { data } = await supa.auth.getUser();
+      if (data?.user){ window.location.href = 'profile.html'; return; }
+    }catch(_){}
+    const authOv = document.getElementById('authOverlay');
+    if (authOv) authOv.style.display = 'flex';
+  });
+
+  // Auto-close drawer after tapping a list item (mobile)
+  const sideList = document.getElementById('sideList');
+  sideList?.addEventListener('click', () => {
+    if (window.matchMedia('(max-width: 600px)').matches) {
+      setTimeout(()=> document.body.classList.add('side-collapsed'), 200);
+    }
+  });
+});
+</script>
+
+<div id="donerdToast" role="status" aria-live="polite"
+     style="position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#111;color:#fff;border-radius:999px;padding:10px 14px;box-shadow:0 6px 18px rgba(0,0,0,.35);z-index:1400;display:none;font-weight:800">
+</div>
+</body>
+</html>

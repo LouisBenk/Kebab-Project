@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dönerd – Über mich</title>
+  <style>
+    :root{ --bg:#f0f0f0; --text:#111; --muted:#6b7280; --card:#ffffff; --ring:#e5e7eb; --chip:#eef0f3;
+      --accent:#fb923c; --accent-strong:#f97316; --shadow:0 8px 24px rgba(0,0,0,.18); --nav-pill-w:140px; }
+    html, body { margin:0; height:100%; background:var(--bg); color:var(--text); font-family:Arial,sans-serif; }
+    .navbar { position:sticky; top:0; z-index:10; background:transparent; display:flex; justify-content:center; padding:12px 16px; }
+    .nav-inner { width:100%; max-width:1280px; display:flex; align-items:center; gap:12px; }
+    .brand { display:flex; align-items:center; gap:8px; font-weight:800; font-size:20px; }
+    .brand .dot { width:12px; height:12px; border-radius:50%; background:#ff385c; display:inline-block; }
+    .right-actions { display:flex; align-items:center; gap:12px; margin-left:auto; }
+    .action-pill { flex:0 0 var(--nav-pill-w); min-width:var(--nav-pill-w); display:flex; align-items:center; justify-content:center; gap:8px; padding:8px 14px; background:#fff; border-radius:999px; border:1px solid var(--ring); cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.06); font-weight:700; white-space:nowrap; }
+    .action-pill:hover{ background:#f9fafb; }
+    .action-icon { width:18px; height:18px; display:inline-grid; place-items:center; border-radius:50%; background:#f3f4f6; font-size:12px; color:#374151; }
+    .lang-toggle{ display:inline-flex; align-items:center; background:#fff; border:1px solid var(--ring); border-radius:999px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,.06); }
+    .lang-toggle button{ min-width:60px; padding:8px 12px; font-weight:800; background:transparent; border:0; cursor:pointer; white-space:nowrap; }
+    .lang-toggle button+button{ border-left:1px solid var(--ring); }
+    .lang-toggle button.is-active{ background:var(--accent); color:#000; }
+    .wrap { display:flex; justify-content:center; padding:20px; }
+    .card { width:min(820px, 96vw); background:var(--card); border-radius:20px; box-shadow:var(--shadow); padding:22px 22px 26px; }
+    .title { font-size:28px; font-weight:800; margin:0 0 8px; }
+    .subtitle { color:var(--muted); margin:0 0 16px; }
+    hr.sep { border:none; border-top:1px solid var(--ring); margin:14px 0 18px; }
+    .section { margin-top:18px; }
+    .section h4 { margin:0 0 10px; font-size:16px; }
+    .pill { display:inline-flex; align-items:center; gap:8px; padding:8px 14px; border-radius:999px; background:var(--chip); border:1px solid var(--ring); margin:4px 8px 0 0; }
+    .actions { display:flex; gap:12px; flex-wrap:wrap; margin-top:18px; }
+    .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; border:none; cursor:pointer; font-weight:800; text-decoration:none; }
+    .btn-primary { background:var(--accent); color:#000; border-radius:999px; padding:12px 16px; box-shadow:0 6px 16px rgba(249,115,22,.35); }
+    .btn-primary:hover{ background:var(--accent-strong); }
+    .btn-secondary { background:#fff; color:#111; border:1px solid var(--ring); border-radius:999px; padding:10px 14px; }
+  </style>
+</head>
+<body>
+  <div class="navbar">
+    <div class="nav-inner">
+      <div class="brand"><span class="dot"></span><span>Dönerd</span></div>
+      <div class="right-actions">
+        <button class="action-pill" onclick="location.href='index.html'"><span class="action-icon">🗺️</span><span data-i18n="nav.map">Karte</span></button>
+        <button class="action-pill" onclick="location.href='add-shop.html'"><span class="action-icon">➕</span><span data-i18n="nav.add">Shop hinzufügen</span></button>
+        <button class="action-pill" onclick="location.href='feedback.html'"><span class="action-icon">💬</span><span data-i18n="nav.feedback">Feedback</span></button>
+        <button class="action-pill" onclick="location.href='selection.html'"><span class="action-icon">📋</span><span data-i18n="nav.selection">Preisliste</span></button>
+        <div class="lang-toggle" role="group" aria-label="Language">
+          <button type="button" data-lang="de" aria-pressed="false">DE</button>
+          <button type="button" data-lang="en" aria-pressed="false">EN</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <main class="wrap">
+    <section class="card">
+      <h1 class="title" data-i18n="about.title">Über mich</h1>
+      <p class="subtitle" data-i18n="about.subtitle">Ich bin ein Kebab-Nerd und baue eine kleine Karte, damit du deinen passenden Laden findest.</p>
+      <hr class="sep" />
+      <div class="section">
+        <h4 data-i18n="about.what">Was ist Dönerd?</h4>
+        <p data-i18n="about.desc">Dönerd sammelt Läden, Preise und Details (Brot, Saucen, vegetarische Optionen), damit die Suche schnell geht.</p>
+        <div class="pill">🍞 <span data-i18n="cat.bread">Brot hausgemacht</span></div>
+        <div class="pill">🌶️ <span data-i18n="cat.sauces">Saucen</span></div>
+        <div class="pill">🥙 <span data-i18n="cat.veg">Vegetarisch</span></div>
+      </div>
+      <div class="section">
+        <h4 data-i18n="about.join">Mitmachen</h4>
+        <p data-i18n="about.joinDesc">Fehlt ein Laden? Preise falsch? Schick mir ein Update – die Community hält alles frisch.</p>
+      </div>
+      <div class="actions">
+        <a class="btn btn-primary" href="add-shop.html" data-i18n="nav.add">Shop hinzufügen</a>
+        <a class="btn btn-secondary" href="feedback.html" data-i18n="nav.feedback">Feedback</a>
+        <a class="btn btn-secondary" href="selection.html" data-i18n="nav.selection">Preisliste</a>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const DICTS={de:{
+      nav:{map:"Karte", add:"Shop hinzufügen", feedback:"Feedback", selection:"Preisliste"},
+      about:{title:"Über mich", subtitle:"Ich bin ein Kebab-Nerd und baue eine kleine Karte, damit du deinen passenden Laden findest.",
+             what:"Was ist Dönerd?", desc:"Dönerd sammelt Läden, Preise und Details (Brot, Saucen, vegetarische Optionen), damit die Suche schnell geht.",
+             join:"Mitmachen", joinDesc:"Fehlt ein Laden? Preise falsch? Schick mir ein Update – die Community hält alles frisch."},
+      cat:{bread:"Brot hausgemacht", sauces:"Saucen", veg:"Vegetarisch"}
+    }, en:{
+      nav:{map:"Map", add:"Add Shop", feedback:"Feedback", selection:"Price list"},
+      about:{title:"About me", subtitle:"I’m a kebab nerd building a tiny map so you find your perfect spot.",
+             what:"What is Dönerd?", desc:"Dönerd collects shops, prices and details (bread, sauces, veggie options) so you can search fast.",
+             join:"Contribute", joinDesc:"Missing a shop? Wrong prices? Send a quick update—the community keeps it fresh."},
+      cat:{bread:"Homemade bread", sauces:"Sauces", veg:"Vegetarian"}
+    }};
+    const I18N=(()=>{let lang='de',dict=DICTS.de;const get=(o,p)=>p.split('.').reduce((a,k)=>a&&a[k]!=null?a[k]:undefined,o);const t=(k,fb)=>get(dict,k)??fb??k;
+      function apply(){document.querySelectorAll('[data-i18n]').forEach(el=>el.textContent=t(el.dataset.i18n,el.textContent.trim()));
+        document.documentElement.lang=lang;
+        document.querySelectorAll('.lang-toggle [data-lang]').forEach(b=>{const on=b.dataset.lang===lang; b.classList.toggle('is-active',on); b.setAttribute('aria-pressed',on?'true':'false');});}
+      function set(l){lang=l;dict=DICTS[l]||DICTS.de;localStorage.setItem('lang',l);apply();}
+      function init(){set(localStorage.getItem('lang')||(['de','en'].includes((navigator.language||'').slice(0,2))?(navigator.language||'').slice(0,2):'de'));
+        document.addEventListener('click',e=>{const b=e.target.closest('.lang-toggle [data-lang]'); if(b) set(b.dataset.lang);});}
+      return {init};})();
+    document.addEventListener('DOMContentLoaded', I18N.init);
+  </script>
+</body>
+</html>

@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dönerd – Preisliste</title>
+  <style>
+    :root{
+      --bg:#f0f0f0; --text:#111; --muted:#6b7280; --card:#ffffff;
+      --ring:#e5e7eb; --chip:#eef0f3; --chipText:#0f172a;
+      --accent:#fb923c; --accent-strong:#f97316;
+      --shadow:0 8px 24px rgba(0,0,0,.18);
+      --nav-pill-w:140px;
+    }
+    html[data-theme="dark"]{
+      --bg:#0b0f14; --text:#e5e7eb; --muted:#9aa4b2; --card:#0f172a;
+      --ring:#1f2937; --chip:#0b1220; --chipText:#e5e7eb;
+      --shadow:0 12px 36px rgba(0,0,0,.45);
+    }
+    html, body { margin:0; height:100%; background:var(--bg); color:var(--text); font-family: Arial, sans-serif; }
+
+    .navbar { position:sticky; top:0; z-index:10; background:transparent; display:flex; justify-content:center; padding:12px 16px; }
+    .nav-inner { width:100%; max-width:1280px; display:flex; align-items:center; gap:12px; }
+    .brand { display:flex; align-items:center; gap:8px; font-weight:800; font-size:20px; }
+    .brand .dot { width:12px; height:12px; border-radius:50%; background:#ff385c; display:inline-block; }
+
+    .right-actions { display:flex; align-items:center; gap:12px; margin-left:auto; }
+    .action-pill {
+      flex:0 0 var(--nav-pill-w); min-width:var(--nav-pill-w);
+      display:flex; align-items:center; justify-content:center; gap:8px;
+      padding:8px 14px; background:var(--card); border-radius:999px;
+      border:1px solid var(--ring); cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.06);
+      font-weight:700; white-space:nowrap; color: var(--text);
+    }
+    .action-pill:hover{ background:rgba(0,0,0,.04); }
+    html[data-theme="dark"] .action-pill:hover{ background:rgba(255,255,255,.06); }
+    .action-icon { width:18px; height:18px; display:inline-grid; place-items:center; border-radius:50%; background:#f3f4f6; font-size:12px; color:#374151; }
+    html[data-theme="dark"] .action-icon{ background:#111827; color:#e5e7eb; }
+
+    .lang-toggle{
+      display:inline-flex; align-items:center; background:var(--card);
+      border:1px solid var(--ring); border-radius:999px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,.06);
+    }
+    .lang-toggle button{ min-width:60px; padding:8px 12px; font-weight:800; background:transparent; border:0; cursor:pointer; white-space:nowrap; color:var(--text); }
+    .lang-toggle button+button{ border-left:1px solid var(--ring); }
+    .lang-toggle button.is-active{ background:var(--accent); color:#000; }
+
+    .wrap { display:flex; justify-content:center; padding:20px; }
+    .card { width:min(1000px, 96vw); background:var(--card); border-radius:20px; box-shadow:var(--shadow); padding:22px 22px 26px; border:1px solid var(--ring); }
+    .title { font-size:28px; font-weight:800; margin:0 0 8px; }
+    .subtitle { color:var(--muted); margin:0 0 16px; }
+    hr.sep { border:none; border-top:1px solid var(--ring); margin:14px 0 18px; }
+
+    .filters { display:grid; grid-template-columns:1fr; gap:10px; }
+    .filter-group { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    .filter-label { font-weight:700; font-size:14px; color:var(--chipText); margin-right:4px; }
+
+    .chip { display:inline-flex; align-items:center; gap:8px; padding:8px 14px; border-radius:999px; background:var(--chip); color:var(--chipText); border:1px solid var(--ring); cursor:pointer; user-select:none; }
+    .chip input { display:none; }
+    .chip.active { background:rgba(249,115,22,.16); border-color:rgba(249,115,22,.35); }
+
+    .meta { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:6px; color:var(--muted); font-size:13px; }
+
+    .list { display:grid; grid-template-columns:1fr; gap:12px; margin-top:12px; }
+    .item { display:flex; align-items:center; justify-content:space-between; gap:12px; background:var(--card); border:1px solid var(--ring); border-radius:14px; padding:12px 14px; }
+    .item h4 { margin:0; font-size:16px; }
+    .item .muted { color:var(--muted); font-size:13px; }
+
+    .prices { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .price { display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; background:#f8fafc; border:1px solid var(--ring); font-size:13px; color:var(--chipText); }
+    html[data-theme="dark"] .price{ background:#0b1220; }
+    .rating { display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; background:#fff7ed; border:1px solid #fed7aa; font-weight:700; }
+    html[data-theme="dark"] .rating{ background:#2a1709; border-color:#7a4b27; color:#ffd2a1; }
+
+    .badge { font-size:11px; padding:2px 6px; border-radius:999px; background:var(--chip); border:1px solid var(--ring); }
+    .badge.min { background:rgba(16,185,129,.15); border-color:rgba(16,185,129,.35); }
+    .badge.max { background:rgba(239,68,68,.15); border-color:rgba(239,68,68,.35); }
+
+    .btn-nav { padding:8px 12px; border:1px solid var(--ring); border-radius:999px; background:var(--card); font-weight:700; color:var(--text); }
+
+    @media (max-width:720px){ .item{ flex-direction:column; align-items:flex-start; } }
+  </style>
+</head>
+<body>
+  <div class="navbar">
+    <div class="nav-inner">
+      <div class="brand"><span class="dot"></span><span>Dönerd</span></div>
+      <div class="right-actions">
+        <button class="action-pill" onclick="location.href='index.html'"><span class="action-icon">🗺️</span><span data-i18n="nav.map">Karte</span></button>
+        <button class="action-pill" id="themeBtn" type="button">
+          <span class="action-icon" id="themeIcon">🌙</span>
+          <span id="themeText">Dark</span>
+        </button>
+        <button class="action-pill" onclick="location.href='add-shop.html'"><span class="action-icon">➕</span><span data-i18n="nav.add">Shop hinzufügen</span></button>
+        <button class="action-pill" onclick="location.href='feedback.html'"><span class="action-icon">💬</span><span data-i18n="nav.feedback">Feedback</span></button>
+        <button class="action-pill" onclick="location.href='about.html'"><span class="action-icon">👤</span><span data-i18n="nav.about">Über mich</span></button>
+        <div class="lang-toggle" role="group" aria-label="Language">
+          <button type="button" data-lang="de" aria-pressed="false">DE</button>
+          <button type="button" data-lang="en" aria-pressed="false">EN</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="card">
+      <h1 class="title" data-i18n="sel.title">Preisliste</h1>
+      <p class="subtitle" data-i18n="sel.subtitle">Liste aller Läden mit Filtern für günstigste/teuerste Kebap, Dürüm, Box & Bewertung.</p>
+      <hr class="sep" />
+
+      <div class="filters">
+        <div class="filter-group" data-key="kebap">
+          <span class="filter-label" data-i18n="price.kebap">Kebap €</span>
+          <label class="chip"><input type="radio" name="kebap" value="all" checked><span data-i18n="sel.all">Alle</span></label>
+          <label class="chip"><input type="radio" name="kebap" value="min"><span data-i18n="sel.min">Günstigste</span></label>
+          <label class="chip"><input type="radio" name="kebap" value="max"><span data-i18n="sel.max">Teuerste</span></label>
+        </div>
+        <div class="filter-group" data-key="durum">
+          <span class="filter-label" data-i18n="price.durum">Dürüm €</span>
+          <label class="chip"><input type="radio" name="durum" value="all" checked><span data-i18n="sel.all">Alle</span></label>
+          <label class="chip"><input type="radio" name="durum" value="min"><span data-i18n="sel.min">Günstigste</span></label>
+          <label class="chip"><input type="radio" name="durum" value="max"><span data-i18n="sel.max">Teuerste</span></label>
+        </div>
+        <div class="filter-group" data-key="box">
+          <span class="filter-label" data-i18n="price.box">Box €</span>
+          <label class="chip"><input type="radio" name="box" value="all" checked><span data-i18n="sel.all">Alle</span></label>
+          <label class="chip"><input type="radio" name="box" value="min"><span data-i18n="sel.min">Günstigste</span></label>
+          <label class="chip"><input type="radio" name="box" value="max"><span data-i18n="sel.max">Teuerste</span></label>
+        </div>
+        <!-- NEW: rating filter -->
+        <div class="filter-group" data-key="rating">
+          <span class="filter-label">Rating ⭐</span>
+          <label class="chip"><input type="radio" name="rating" value="all" checked><span>Alle</span></label>
+          <label class="chip"><input type="radio" name="rating" value="4"><span>≥ 4.0</span></label>
+          <label class="chip"><input type="radio" name="rating" value="4.5"><span>≥ 4.5</span></label>
+          <label class="chip"><input type="radio" name="rating" value="5"><span>≥ 5.0</span></label>
+        </div>
+      </div>
+
+      <div class="meta"><span id="count">0</span></div>
+      <div id="list" class="list"></div>
+    </div>
+  </div>
+
+  <!-- Supabase client -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+  <script>
+    /* ===== i18n ===== */
+    const DICTS={de:{ nav:{map:"Karte", add:"Shop hinzufügen", feedback:"Feedback", about:"Über mich"},
+      sel:{title:"Preisliste", subtitle:"Liste aller Läden mit Filtern für günstigste/teuerste Kebap, Dürüm, Box & Bewertung.", all:"Alle", min:"Günstigste", max:"Teuerste", nav:"Navigieren", shops:"Läden"},
+      price:{kebap:"Kebap €", durum:"Dürüm €", box:"Box €"} },
+      en:{ nav:{map:"Map", add:"Add Shop", feedback:"Feedback", about:"About me"},
+      sel:{title:"Price list", subtitle:"All shops with filters for cheapest/most expensive Kebap, Durum, Box & rating.", all:"All", min:"Cheapest", max:"Most expensive", nav:"Navigate", shops:"shops"},
+      price:{kebap:"Kebap €", durum:"Durum €", box:"Box €"} }};
+    const I18N=(()=>{let lang='de',dict=DICTS.de;const get=(o,p)=>p.split('.').reduce((a,k)=>a&&a[k]!=null?a[k]:undefined,o);const t=(k,fb)=>get(dict,k)??fb??k;
+      function apply(){document.querySelectorAll('[data-i18n]').forEach(el=>el.textContent=t(el.dataset.i18n,el.textContent.trim()));
+        document.documentElement.lang=lang; document.querySelectorAll('.lang-toggle [data-lang]').forEach(b=>{const on=b.dataset.lang===lang; b.classList.toggle('is-active',on); b.setAttribute('aria-pressed',on?'true':'false');});}
+      function set(l){lang=l;dict=DICTS[l]||DICTS.de;localStorage.setItem('lang',l);apply();}
+      function init(){set(localStorage.getItem('lang')||(['de','en'].includes((navigator.language||'').slice(0,2))?(navigator.language||'').slice(0,2):'de')); document.addEventListener('click',e=>{const b=e.target.closest('.lang-toggle [data-lang]'); if(b) set(b.dataset.lang);});}
+      return {init,t};})(); document.addEventListener('DOMContentLoaded', I18N.init);
+  </script>
+
+  <!-- Dark mode -->
+  <script>
+    (function(){
+      const themeBtn  = document.getElementById('themeBtn');
+      const themeIcon = document.getElementById('themeIcon');
+      const themeText = document.getElementById('themeText');
+      function setTheme(mode){
+        document.documentElement.setAttribute('data-theme', mode);
+        localStorage.setItem('theme', mode);
+        themeIcon.textContent = mode === 'dark' ? '🌞' : '🌙';
+        themeText.textContent = mode === 'dark' ? 'Light' : 'Dark';
+      }
+      const stored = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      setTheme(stored || (prefersDark ? 'dark' : 'light'));
+      themeBtn.addEventListener('click', () => {
+        const current = document.documentElement.getAttribute('data-theme') || 'light';
+        setTheme(current === 'dark' ? 'light' : 'dark');
+      });
+    })();
+  </script>
+
+  <script>
+    // ===== Supabase config (LIVE – no shops.json used) =====
+    const SUPABASE_URL  = 'https://bcxeaxhhhvagpvomtsyi.supabase.co';
+    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjeGVheGhoaHZhZ3B2b210c3lpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyNTUxMzcsImV4cCI6MjA3MDgzMTEzN30.HCnWgapZrDY4RIgdXM5eh2UkslFpSSuJwEUszZHtp0w';
+    const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+    let shops=[]; let mins={kebap:Infinity,durum:Infinity,box:Infinity}; let maxs={kebap:-Infinity,durum:-Infinity,box:-Infinity};
+    const state={kebap:'all',durum:'all',box:'all',rating:'all'};
+
+    const num = v => (typeof v==='number' && isFinite(v)) ? v : NaN;
+    const fmt = v => (typeof v==='number' && isFinite(v) && v>0) ? `€${v.toFixed(2)}` : '–';
+    const fmtRating = r => (typeof r==='number' && isFinite(r)) ? r.toFixed(1) : '—';
+
+    function computeExtrema(){
+      ['kebap','durum','box'].forEach(k=>{mins[k]=Infinity; maxs[k]=-Infinity;});
+      shops.forEach(s=>{
+        const p=s.prices||{};
+        ['kebap','durum','box'].forEach(k=>{
+          const v=num(p[k]); if(!isNaN(v) && v>0){ mins[k]=Math.min(mins[k],v); maxs[k]=Math.max(maxs[k],v); }
+        });
+      });
+    }
+
+    function refreshChips(){
+      document.querySelectorAll('.filter-group').forEach(g=>{
+        g.querySelectorAll('.chip').forEach(lb=>{
+          const i=lb.querySelector('input'); lb.classList.toggle('active', i.checked);
+        });
+      });
+    }
+
+    function passes(s){
+      const p=s.prices||{};
+      const passPrice = key=>{
+        const mode=state[key]; const v=num(p[key]);
+        if(mode==='all') return true;
+        if(isNaN(v)||v<=0) return false;
+        if(mode==='min') return Math.abs(v-mins[key])<1e-9;
+        if(mode==='max') return Math.abs(v-maxs[key])<1e-9;
+        return true;
+      };
+      if(!(passPrice('kebap') && passPrice('durum') && passPrice('box'))) return false;
+
+      if(state.rating==='all') return true;
+      const thr = parseFloat(state.rating);
+      return typeof s.rating==='number' && s.rating >= thr;
+    }
+
+    function render(){
+      const list=document.getElementById('list');
+      const rows = shops.filter(passes).slice().sort((a,b)=>{
+        // sort by rating desc, then name
+        const ar = isFinite(a.rating)?a.rating:-1, br = isFinite(b.rating)?b.rating:-1;
+        if(br!==ar) return br-ar;
+        return (a.name||'').localeCompare(b.name||'');
+      });
+      document.getElementById('count').textContent = `${rows.length} ${I18N.t('sel.shops')}`;
+      list.innerHTML='';
+
+      rows.forEach(s=>{
+        const k=num(s?.prices?.kebap), d=num(s?.prices?.durum), b=num(s?.prices?.box);
+        const el=document.createElement('div'); el.className='item';
+        el.innerHTML=`
+          <div>
+            <h4>${s.name||'–'}</h4>
+            <div class="muted">${s.address||''}</div>
+          </div>
+          <div class="prices">
+            <div class="rating">⭐ ${fmtRating(s.rating)}</div>
+            <div class="price">${I18N.t('price.kebap')} ${fmt(k)} ${(!isNaN(k)&&k>0&&k===mins.kebap)?'<span class="badge min">min</span>':''} ${(!isNaN(k)&&k>0&&k===maxs.kebap)?'<span class="badge max">max</span>':''}</div>
+            <div class="price">${I18N.t('price.durum')} ${fmt(d)} ${(!isNaN(d)&&d>0&&d===mins.durum)?'<span class="badge min">min</span>':''} ${(!isNaN(d)&&d>0&&d===maxs.durum)?'<span class="badge max">max</span>':''}</div>
+            <div class="price">${I18N.t('price.box')} ${fmt(b)} ${(!isNaN(b)&&b>0&&b===mins.box)?'<span class="badge min">min</span>':''} ${(!isNaN(b)&&b>0&&b===maxs.box)?'<span class="badge max">max</span>':''}</div>
+            <a class="btn-nav" href="https://www.google.com/maps?q=${s.lat},${s.lng}" target="_blank" rel="noopener">${I18N.t('sel.nav')}</a>
+          </div>`;
+        list.appendChild(el);
+      });
+      refreshChips();
+    }
+
+    document.addEventListener('change', e=>{
+      if(e.target.matches('.filter-group input[type="radio"]')){
+        state[e.target.name]=e.target.value;
+        render(); refreshChips();
+      }
+    });
+
+    async function load(){
+      try{
+        const { data, error } = await supa
+          .from('shops')
+          .select('id,name,address,lat,lng,price_kebap,price_durum,price_box,rating_admin')
+          .order('name', { ascending: true });
+
+        if(error) throw error;
+
+        shops = (data||[]).map(r => ({
+          id: r.id,
+          name: r.name,
+          address: r.address,
+          lat: r.lat, lng: r.lng,
+          prices: { kebap: r.price_kebap, durum: r.price_durum, box: r.price_box },
+          rating: typeof r.rating_admin === 'number' ? r.rating_admin : null
+        }));
+
+        computeExtrema();
+        render();
+      }catch(err){
+        console.error('[selection] load error:', err);
+        document.getElementById('list').innerHTML =
+          '<div class="subtitle">Fehler beim Laden aus Supabase.</div>';
+      }
+    }
+
+    load();
+  </script>
+</body>
+</html>
