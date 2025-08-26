@@ -34,6 +34,39 @@
     .action-pill{display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--card);border:1px solid var(--ring);border-radius:999px;box-shadow:0 2px 8px rgba(0,0,0,.06);font-weight:700;white-space:nowrap;cursor:pointer;color:var(--text)}
     .action-pill:hover{background:rgba(0,0,0,.04)}
     .action-pill.is-active{background:var(--accent); color:#000; box-shadow:0 6px 16px rgba(249,115,22,.35)}
+    /* Burger hidden by default; show only on small screens */
+#mobileMenuBtn{ display:none; }
+
+/* Mobile dropdown (fixed) */
+#mobileMenu{
+  position:fixed;
+  top:var(--topbar-h);
+  right:8px;
+  background:var(--card);
+  color:var(--text);
+  border:1px solid var(--ring);
+  border-radius:12px;
+  box-shadow:var(--shadow);
+  z-index:2200;
+}
+#mobileMenu.hidden{ display:none; }
+
+#mobileMenu .item{
+  display:block; width:100%;
+  padding:10px 12px;
+  border:0; background:transparent;
+  text-align:left; font:inherit; color:inherit;
+  cursor:pointer;
+}
+#mobileMenu .item:hover{ background:rgba(0,0,0,.04); }
+html[data-theme="dark"] #mobileMenu .item:hover{ background:rgba(255,255,255,.06); }
+
+/* Phone layout: hide the full right-actions except the burger, show burger */
+@media (max-width:600px){
+  #mobileMenuBtn{ display:inline-flex; }
+  .right-actions > *:not(#mobileMenuBtn){ display:none; }
+}
+
     .action-icon{width:18px;height:18px;display:inline-grid;place-items:center;border-radius:50%;background:#f3f4f6;font-size:12px;color:#374151}
     .lang-toggle{display:inline-flex;background:var(--card);border:1px solid var(--ring);border-radius:999px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.06)}
     .lang-toggle button{min-width:60px;padding:8px 12px;font-weight:800;border:0;background:transparent;cursor:pointer;line-height:1;color:var(--text)}
@@ -138,6 +171,9 @@
           <button type="button" data-lang="de" aria-pressed="true" class="is-active">DE</button>
           <button type="button" data-lang="en" aria-pressed="false">EN</button>
         </div>
+        <button id="mobileMenuBtn" class="action-pill" aria-haspopup="true" aria-expanded="false"
+  onclick="(function(m){if(!m)return;const open=m.classList.contains('hidden');m.classList.toggle('hidden',!open);this.setAttribute('aria-expanded',open?'true':'false');})(document.getElementById('mobileMenu'))">☰</button>
+
       </div>
     </div>
   </div>
@@ -567,5 +603,51 @@
       }
     }
   </script>
+  <!-- Mobile dropdown (fixed, above the content) -->
+<div id="mobileMenu" class="hidden">
+  <button class="item" onclick="location.href='index.html'">🗺️ Karte</button>
+  <button class="item" onclick="location.href='feedback.html'">💬 Feedback</button>
+  <button class="item" onclick="location.href='selection.html'">📋 Preisliste</button>
+  <button class="item" onclick="location.href='add-shop.html'">➕ Shop hinzufügen</button>
+  <button class="item" onclick="location.href='about.html'">👤 Über mich</button>
+  <button class="item" id="mobileProfile">🔑 Login/Profil</button>
+</div>
+
+<script>
+/* Optional nicety: close menu after a click; route Login/Profile smartly */
+(function(){
+  const menu = document.getElementById('mobileMenu');
+  const btn  = document.getElementById('mobileMenuBtn');
+  if(!menu || !btn) return;
+
+  // Close after choosing an item
+  menu.querySelectorAll('.item').forEach(el=>{
+    el.addEventListener('click', ()=> {
+      menu.classList.add('hidden');
+      btn.setAttribute('aria-expanded','false');
+    });
+  });
+
+  // Login/Profile behavior reuses existing loginBtn logic if present
+  const prof = document.getElementById('mobileProfile');
+  const loginBtn = document.getElementById('loginBtn');
+  if (prof && loginBtn) {
+    prof.addEventListener('click', ()=> {
+      loginBtn.click();
+    });
+  }
+
+  // Close on outside tap / ESC (defensive)
+  document.addEventListener('click', (e)=>{
+    if (menu.classList.contains('hidden')) return;
+    const inMenu = menu.contains(e.target) || e.target === btn;
+    if (!inMenu) { menu.classList.add('hidden'); btn.setAttribute('aria-expanded','false'); }
+  });
+  document.addEventListener('keydown', (e)=>{
+    if (e.key === 'Escape') { menu.classList.add('hidden'); btn.setAttribute('aria-expanded','false'); }
+  });
+})();
+</script>
+
 </body>
 </html>
