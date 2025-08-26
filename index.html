@@ -209,6 +209,39 @@ html[data-theme="dark"] .rate-cancel{ background:#1f2937; color:#e5e7eb; }
     .action-pill:hover{background:rgba(0,0,0,.04)}
     html[data-theme="dark"] .action-pill:hover{background:rgba(255,255,255,.05)}
     .action-icon{width:18px;height:18px;display:inline-grid;place-items:center;border-radius:50%;background:#f3f4f6;font-size:12px;color:#374151}
+    /* Burger hidden by default; show only on small screens */
+#mobileMenuBtn{ display:none; }
+
+/* Mobile dropdown (fixed above content) */
+#mobileMenu{
+  position:fixed;
+  top:var(--topbar-h);
+  right:8px;
+  background:var(--card);
+  color:var(--text);
+  border:1px solid var(--ring);
+  border-radius:12px;
+  box-shadow:var(--shadow);
+  z-index:2200;
+}
+#mobileMenu.hidden{ display:none; }
+
+#mobileMenu .item{
+  display:block; width:100%;
+  padding:10px 12px;
+  border:0; background:transparent;
+  text-align:left; font:inherit; color:inherit;
+  cursor:pointer;
+}
+#mobileMenu .item:hover{ background:rgba(0,0,0,.04); }
+html[data-theme="dark"] #mobileMenu .item:hover{ background:rgba(255,255,255,.06); }
+
+/* Phone layout: show burger, hide the full button row (keeps header clean) */
+@media (max-width:600px){
+  #mobileMenuBtn{ display:inline-flex; }
+  .right-actions > *:not(#mobileMenuBtn){ display:none; }
+}
+
     html[data-theme="dark"] .action-icon{background:#111827;color:#e5e7eb}
 
     .lang-toggle{display:inline-flex;background:var(--card);border:1px solid var(--ring);border-radius:999px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.06)}
@@ -605,6 +638,9 @@ html[data-theme="dark"] #mobileMenu a:hover{
           <button type="button" data-lang="de" aria-pressed="true" class="is-active">DE</button>
           <button type="button" data-lang="en" aria-pressed="false">EN</button>
         </div>
+        <button id="mobileMenuBtn" class="action-pill" aria-haspopup="true" aria-expanded="false"
+  onclick="(function(m){if(!m)return;const open=m.classList.contains('hidden');m.classList.toggle('hidden',!open);this.setAttribute('aria-expanded',open?'true':'false');})(document.getElementById('mobileMenu'))">☰</button>
+
       </div>
       <button id="mobileMenuBtn" class="action-pill" aria-haspopup="true" aria-expanded="false"
   onclick="(function(m){if(!m)return;const open=m.classList.contains('hidden');m.classList.toggle('hidden',!open);this.setAttribute('aria-expanded',open?'true':'false');})(document.getElementById('mobileMenu'))">☰</button>
@@ -1933,5 +1969,50 @@ document.addEventListener('DOMContentLoaded', () => {
 <div id="donerdToast" role="status" aria-live="polite"
      style="position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#111;color:#fff;border-radius:999px;padding:10px 14px;box-shadow:0 6px 18px rgba(0,0,0,.35);z-index:1400;display:none;font-weight:800">
 </div>
+<!-- Mobile dropdown -->
+<div id="mobileMenu" class="hidden">
+  <button class="item" onclick="location.href='index.html'">🗺️ Karte</button>
+  <button class="item" onclick="location.href='feedback.html'">💬 Feedback</button>
+  <button class="item" onclick="location.href='selection.html'">📋 Preisliste</button>
+  <button class="item" onclick="location.href='add-shop.html'">➕ Shop hinzufügen</button>
+  <button class="item" onclick="location.href='about.html'">👤 Über mich</button>
+  <button class="item" id="mobileProfile">🔑 Login/Profil</button>
+</div>
+<script>
+/* Mobile menu helpers */
+(function(){
+  const menu = document.getElementById('mobileMenu');
+  const btn  = document.getElementById('mobileMenuBtn');
+  if(!menu || !btn) return;
+
+  // Close after choosing an item
+  menu.querySelectorAll('.item').forEach(el=>{
+    el.addEventListener('click', ()=> {
+      menu.classList.add('hidden');
+      btn.setAttribute('aria-expanded','false');
+    });
+  });
+
+  // Reuse existing login/profile action
+  const prof = document.getElementById('mobileProfile');
+  const loginBtn = document.getElementById('loginBtn');
+  if (prof && loginBtn) {
+    prof.addEventListener('click', ()=> { loginBtn.click(); });
+  }
+
+  // Close on outside tap
+  document.addEventListener('click', (e)=>{
+    if (menu.classList.contains('hidden')) return;
+    const inMenu = menu.contains(e.target) || e.target === btn;
+    if (!inMenu) { menu.classList.add('hidden'); btn.setAttribute('aria-expanded','false'); }
+  });
+
+  // Close on ESC
+  document.addEventListener('keydown', (e)=>{
+    if (e.key === 'Escape') { menu.classList.add('hidden'); btn.setAttribute('aria-expanded','false'); }
+  });
+})();
+</script>
+
 </body>
 </html>
