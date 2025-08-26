@@ -532,6 +532,30 @@ img{ max-width:100%; height:auto; }
 
 /* Slightly rounder pills globally */
 .action-pill{ border-radius:14px; }
+/* Mobile dropdown (fixed, above map) */
+#mobileMenu{
+  position:fixed;
+  top:var(--topbar-h);
+  right:8px;
+  background:var(--card);
+  color:var(--text);
+  border:1px solid var(--ring);
+  border-radius:12px;
+  box-shadow:var(--shadow);
+  z-index:2200;
+}
+#mobileMenu.hidden{ display:none; }
+
+#mobileMenu .item{
+  display:block; width:100%;
+  padding:10px 12px;
+  border:0; background:transparent;
+  text-align:left; font:inherit; color:inherit;
+  cursor:pointer;
+}
+#mobileMenu .item:hover{ background:rgba(0,0,0,.04); }
+html[data-theme="dark"] #mobileMenu .item:hover{ background:rgba(255,255,255,.06); }
+
 /* Mobile menu items (top-right dropdown) */
 #mobileMenu button, #mobileMenu a{
   display:block; width:100%;
@@ -582,13 +606,16 @@ html[data-theme="dark"] #mobileMenu a:hover{
           <button type="button" data-lang="en" aria-pressed="false">EN</button>
         </div>
       </div>
-      <button id="mobileMenuBtn" class="action-pill" aria-haspopup="true" aria-expanded="false">☰</button>
-<div id="mobileMenu" class="hidden" style="position:absolute;top:52px;right:8px;background:var(--card);border:1px solid var(--ring);border-radius:12px;box-shadow:var(--shadow);z-index:2000">
-  <button onclick="location.href='add-shop.html'">➕ Shop hinzufügen</button>
-  <button onclick="location.href='feedback.html'">💬 Feedback</button>
-  <button onclick="location.href='selection.html'">📋 Preisliste</button>
-  <button onclick="location.href='about.html'">👤 Über mich</button>
+      <button id="mobileMenuBtn" class="action-pill" aria-haspopup="true" aria-expanded="false"
+  onclick="(function(m){if(!m)return;const open=m.classList.contains('hidden');m.classList.toggle('hidden',!open);this.setAttribute('aria-expanded',open?'true':'false');})(document.getElementById('mobileMenu'))">☰</button>
+
+<div id="mobileMenu" class="hidden">
+  <button class="item" onclick="location.href='add-shop.html'">➕ Shop hinzufügen</button>
+  <button class="item" onclick="location.href='feedback.html'">💬 Feedback</button>
+  <button class="item" onclick="location.href='selection.html'">📋 Preisliste</button>
+  <button class="item" onclick="location.href='about.html'">👤 Über mich</button>
 </div>
+
 
     </div>
   </div>
