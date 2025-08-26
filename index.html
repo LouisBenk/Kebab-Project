@@ -532,6 +532,19 @@ img{ max-width:100%; height:auto; }
 
 /* Slightly rounder pills globally */
 .action-pill{ border-radius:14px; }
+/* Mobile menu items (top-right dropdown) */
+#mobileMenu button, #mobileMenu a{
+  display:block; width:100%;
+  padding:10px 12px; border:0; background:transparent; text-align:left;
+  font: inherit; color: inherit; cursor: pointer;
+}
+#mobileMenu button:hover, #mobileMenu a:hover{
+  background:rgba(0,0,0,.04);
+}
+html[data-theme="dark"] #mobileMenu button:hover,
+html[data-theme="dark"] #mobileMenu a:hover{
+  background:rgba(255,255,255,.06);
+}
 
 </style>
 </head>
@@ -569,7 +582,7 @@ img{ max-width:100%; height:auto; }
           <button type="button" data-lang="en" aria-pressed="false">EN</button>
         </div>
       </div>
-      <button id="mobileMenuBtn" class="action-pill" style="display:none">☰</button>
+      <button id="mobileMenuBtn" class="action-pill" aria-haspopup="true" aria-expanded="false">☰</button>
 <div id="mobileMenu" class="hidden" style="position:absolute;top:52px;right:8px;background:var(--card);border:1px solid var(--ring);border-radius:12px;box-shadow:var(--shadow);z-index:2000">
   <button onclick="location.href='add-shop.html'">➕ Shop hinzufügen</button>
   <button onclick="location.href='feedback.html'">💬 Feedback</button>
@@ -1201,31 +1214,7 @@ async function submitRating(shop, value, comment){
     const modal=document.getElementById('modalOverlay');
     const applyBtn=document.getElementById('applyBtn');
     const resetBtn=document.getElementById('resetBtn');
-    // === Mobile menu (top-right) ===
-const mobileBtn  = document.getElementById('mobileMenuBtn');
-const mobileMenu = document.getElementById('mobileMenu');
-
-function toggleMobileMenu(force){
-  const show = typeof force === 'boolean' ? force : mobileMenu.classList.contains('hidden');
-  mobileMenu.classList.toggle('hidden', !show);
-}
-
-mobileBtn?.addEventListener('click', (e)=>{
-  e.stopPropagation();
-  toggleMobileMenu(true);
-});
-
-// Close on outside click
-document.addEventListener('click', (e)=>{
-  if (!mobileMenu || mobileMenu.classList.contains('hidden')) return;
-  const clickedInside = mobileMenu.contains(e.target) || e.target === mobileBtn;
-  if (!clickedInside) toggleMobileMenu(false);
-});
-
-// Close on Esc
-document.addEventListener('keydown', (e)=>{
-  if (e.key === 'Escape') toggleMobileMenu(false);
-});
+   
 
 // Close after choosing a link
 mobileMenu?.querySelectorAll('button,a').forEach(el=>{
@@ -1839,6 +1828,7 @@ if(s.card)           tags.push(`<span class="tag-pill"><span class="icon-bubble"
 
 <!-- Tiny toast -->
  <script id="mobile-glue">
+  
 document.addEventListener('DOMContentLoaded', () => {
   // Ensure collapsed on small screens
   if (window.matchMedia('(max-width: 600px)').matches) {
@@ -1876,6 +1866,41 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+</script>
+<script>
+(function(){
+  const btn  = document.getElementById('mobileMenuBtn');
+  const menu = document.getElementById('mobileMenu');
+  if (!btn || !menu) return;
+
+  const isHidden = () => menu.classList.contains('hidden');
+  const setOpen  = (open) => {
+    menu.classList.toggle('hidden', !open);
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  };
+
+  // Toggle on button
+  btn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    setOpen(isHidden());
+  });
+
+  // Close on outside click
+  document.addEventListener('click', (e)=>{
+    if (isHidden()) return;
+    if (!menu.contains(e.target) && e.target !== btn) setOpen(false);
+  });
+
+  // Close on ESC
+  document.addEventListener('keydown', (e)=>{
+    if (e.key === 'Escape') setOpen(false);
+  });
+
+  // Close after choosing an item
+  menu.querySelectorAll('button, a').forEach(el=>{
+    el.addEventListener('click', ()=> setOpen(false));
+  });
+})();
 </script>
 
 <div id="donerdToast" role="status" aria-live="polite"
