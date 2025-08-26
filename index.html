@@ -1201,14 +1201,37 @@ async function submitRating(shop, value, comment){
     const modal=document.getElementById('modalOverlay');
     const applyBtn=document.getElementById('applyBtn');
     const resetBtn=document.getElementById('resetBtn');
-    document.getElementById('filterBtn').addEventListener('click', ()=>{
-  modal.style.display='flex';
-  invalidateAfterFrame(50);
-  // Toggle mobile menu
-document.getElementById('mobileMenuBtn')?.addEventListener('click', ()=>{
-  document.getElementById('mobileMenu').classList.toggle('hidden');
+    // === Mobile menu (top-right) ===
+const mobileBtn  = document.getElementById('mobileMenuBtn');
+const mobileMenu = document.getElementById('mobileMenu');
+
+function toggleMobileMenu(force){
+  const show = typeof force === 'boolean' ? force : mobileMenu.classList.contains('hidden');
+  mobileMenu.classList.toggle('hidden', !show);
+}
+
+mobileBtn?.addEventListener('click', (e)=>{
+  e.stopPropagation();
+  toggleMobileMenu(true);
 });
+
+// Close on outside click
+document.addEventListener('click', (e)=>{
+  if (!mobileMenu || mobileMenu.classList.contains('hidden')) return;
+  const clickedInside = mobileMenu.contains(e.target) || e.target === mobileBtn;
+  if (!clickedInside) toggleMobileMenu(false);
 });
+
+// Close on Esc
+document.addEventListener('keydown', (e)=>{
+  if (e.key === 'Escape') toggleMobileMenu(false);
+});
+
+// Close after choosing a link
+mobileMenu?.querySelectorAll('button,a').forEach(el=>{
+  el.addEventListener('click', ()=> toggleMobileMenu(false));
+});
+
 
     applyBtn.addEventListener('click', ()=>{
   modal.style.display='none';
