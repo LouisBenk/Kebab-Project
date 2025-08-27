@@ -1968,6 +1968,25 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 })();
 </script>
+<!-- SAFE burger handler (already at the bottom) -->
+<script>
+(function(){
+  const menu = document.getElementById('mobileMenu');
+  const btn  = document.getElementById('mobileMenuBtn');
+  if(!menu || !btn) return; // <-- prevents runtime errors on old DOM
+
+  const isHidden = () => menu.classList.contains('hidden');
+  const setOpen  = (open) => {
+    menu.classList.toggle('hidden', !open);
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  };
+
+  btn.addEventListener('click', (e)=>{ e.stopPropagation(); setOpen(isHidden()); });
+  document.addEventListener('click', (e)=>{ if (!isHidden() && !menu.contains(e.target) && e.target !== btn) setOpen(false); });
+  document.addEventListener('keydown', (e)=>{ if (e.key === 'Escape') setOpen(false); });
+  menu.querySelectorAll('button, a').forEach(el=> el.addEventListener('click', ()=> setOpen(false)));
+})();
+</script>
 
 </body>
 </html>
