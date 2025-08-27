@@ -906,9 +906,11 @@ async function toggleFavorite(shopId){
 }
 
 function invalidateAfterFrame(delay=0){
-  if(!window.map) return;
-  requestAnimationFrame(()=> setTimeout(()=> window.map.invalidateSize(), delay));
+  const m = window._map || window.map;           // prefer _map, fallback to map
+  if(!m || typeof m.invalidateSize !== 'function') return;
+  requestAnimationFrame(() => setTimeout(() => m.invalidateSize(), delay));
 }
+
 window.addEventListener('resize', ()=> invalidateAfterFrame(50));
 window.addEventListener('orientationchange', ()=> invalidateAfterFrame(150));
 
