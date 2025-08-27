@@ -480,6 +480,12 @@ img{ max-width:100%; height:auto; }
     --topbar-h: 52px;
     --gap-top: 8px;
   }
+/* === FINAL: keep burger visible on phones === */
+@media (max-width: 600px){
+  .right-actions{ display:flex !important; align-items:center; gap:6px; }
+  .right-actions > *:not(#mobileMenuBtn){ display:none !important; }
+  #mobileMenuBtn{ display:inline-flex !important; }
+}
 
   /* Top bar */
   #navbar{
