@@ -212,30 +212,6 @@ html[data-theme="dark"] .rate-cancel{ background:#1f2937; color:#e5e7eb; }
     /* Burger hidden by default; show only on small screens */
 #mobileMenuBtn{ display:none; }
 
-/* Mobile dropdown (fixed above content) */
-#mobileMenu{
-  position:fixed;
-  top:var(--topbar-h);
-  right:8px;
-  background:var(--card);
-  color:var(--text);
-  border:1px solid var(--ring);
-  border-radius:12px;
-  box-shadow:var(--shadow);
-  z-index:2200;
-}
-#mobileMenu.hidden{ display:none; }
-
-#mobileMenu .item{
-  display:block; width:100%;
-  padding:10px 12px;
-  border:0; background:transparent;
-  text-align:left; font:inherit; color:inherit;
-  cursor:pointer;
-}
-#mobileMenu .item:hover{ background:rgba(0,0,0,.04); }
-html[data-theme="dark"] #mobileMenu .item:hover{ background:rgba(255,255,255,.06); }
-
 /* Phone layout: show burger, hide the full button row (keeps header clean) */
 @media (max-width:600px){
   #mobileMenuBtn{ display:inline-flex; }
@@ -638,21 +614,8 @@ html[data-theme="dark"] #mobileMenu a:hover{
           <button type="button" data-lang="de" aria-pressed="true" class="is-active">DE</button>
           <button type="button" data-lang="en" aria-pressed="false">EN</button>
         </div>
-        <button id="mobileMenuBtn" class="action-pill" aria-haspopup="true" aria-expanded="false"
-  onclick="(function(m){if(!m)return;const open=m.classList.contains('hidden');m.classList.toggle('hidden',!open);this.setAttribute('aria-expanded',open?'true':'false');})(document.getElementById('mobileMenu'))">☰</button>
-
+        <button id="mobileMenuBtn" class="action-pill" aria-haspopup="true" aria-expanded="false">☰</button>
       </div>
-      <button id="mobileMenuBtn" class="action-pill" aria-haspopup="true" aria-expanded="false"
-  onclick="(function(m){if(!m)return;const open=m.classList.contains('hidden');m.classList.toggle('hidden',!open);this.setAttribute('aria-expanded',open?'true':'false');})(document.getElementById('mobileMenu'))">☰</button>
-
-<div id="mobileMenu" class="hidden">
-  <button class="item" onclick="location.href='add-shop.html'">➕ Shop hinzufügen</button>
-  <button class="item" onclick="location.href='feedback.html'">💬 Feedback</button>
-  <button class="item" onclick="location.href='selection.html'">📋 Preisliste</button>
-  <button class="item" onclick="location.href='about.html'">👤 Über mich</button>
-</div>
-
-
     </div>
   </div>
 
@@ -1277,15 +1240,7 @@ async function submitRating(shop, value, comment){
     const modal=document.getElementById('modalOverlay');
     const applyBtn=document.getElementById('applyBtn');
     const resetBtn=document.getElementById('resetBtn');
-   
-
-// Close after choosing a link
-mobileMenu?.querySelectorAll('button,a').forEach(el=>{
-  el.addEventListener('click', ()=> toggleMobileMenu(false));
-});
-
-
-    applyBtn.addEventListener('click', ()=>{
+      applyBtn.addEventListener('click', ()=>{
   modal.style.display='none';
   drawMarkers(); renderList();
   invalidateAfterFrame(50);
